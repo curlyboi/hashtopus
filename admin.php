@@ -36,10 +36,11 @@ $loadtime=microtime(true);
 ?><html>
 <head>
   <title>Hashtopus <?php echo $htpver." [$htphost]"; ?></title>
-  <link rel="icon" href="img/favicon.ico" type="image/x-icon"/>
+  <link rel="icon" href="favicon.ico" type="image/x-icon"/>
   <link href='admin.css' rel='stylesheet' type='text/css'>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <!--<META http-equiv="cache-control" content="no-cache">-->
+  <script type="text/javascript" src="jscolor/jscolor.js"></script>
   <script>
     function sourceChange(valu) {
       var pasteObject=document.getElementById("pasteLine");
@@ -499,7 +500,7 @@ echo '</ul>
       break;
       
     case "taskprio";
-      // change taks priority
+      // change task priority
       $task=intval($_POST["task"]);
       $prio=intval($_POST["priority"]);
       $kv=mysqli_query_wrapper($dblink,"SELECT 1 FROM tasks WHERE tasks.priority=$prio AND tasks.id!=$task AND tasks.priority>0 AND SIGN(IFNULL(tasks.hashlist,0))=(SELECT SIGN(IFNULL(hashlist,0)) FROM tasks WHERE id=$task) LIMIT 1");
@@ -511,6 +512,21 @@ echo '</ul>
         if (!$vysledek) {
           echo "<script>alert('Could not change priority!');</script>";
         }
+      }
+      break;
+
+    case "taskcolor";
+      // change task color
+      $task=intval($_POST["task"]);
+      $color=$_POST["color"];
+      if (preg_match("/[0-9A-Za-z]{6}/",$color)==1) {
+        $color="'$color'";
+      } else {
+       $color="NULL"; 
+      }
+      $vysledek=mysqli_query_wrapper($dblink,"UPDATE tasks SET color=$color WHERE id=$task");
+      if (!$vysledek) {
+        echo "<script>alert('Could not change color!');</script>";
       }
       break;
 
@@ -725,7 +741,7 @@ echo '</ul>
 
     case "tasks":
       // list tasks
-      $kver=mysqli_query_wrapper($dblink,"SELECT tasks.id AS task,tasks.chunktime,tasks.priority,tasks.name,tasks.attackcmd,tasks.hashlist,tasks.progress,IFNULL(chunks.sumprog,0) AS sumprog,tasks.keyspace,IFNULL(chunks.pcount,0) AS pcount,IFNULL(chunks.ccount,0) AS ccount,IFNULL(taskfiles.secret,0) AS secret,IF(chunks.lastact>".($cas-$config["chunktimeout"]).",1,0) AS active,IFNULL(assignments.acount,0) AS assigncount,taskfiles.fcount AS filescount,IFNULL(taskfiles.fsize,0) AS filesize,hashlists.name AS hname,hashlists.secret AS hsecret,IF(hashlists.cracked<hashlists.hashcount,1,0) AS hlinc FROM tasks JOIN hashlists ON hashlists.id=tasks.hashlist LEFT JOIN (SELECT task,SUM(cracked) AS pcount,COUNT(1) AS ccount,GREATEST(MAX(dispatchtime),MAX(solvetime)) AS lastact,SUM(progress) AS sumprog FROM chunks GROUP BY task) chunks ON chunks.task=tasks.id LEFT JOIN (SELECT task,COUNT(1) AS acount FROM assignments GROUP BY task) assignments ON assignments.task=tasks.id LEFT JOIN (SELECT taskfiles.task,COUNT(1) AS fcount,SUM(files.size) AS fsize,MAX(files.secret) AS secret FROM taskfiles JOIN files ON files.id=taskfiles.file GROUP BY taskfiles.task) taskfiles ON taskfiles.task=tasks.id ORDER BY tasks.priority DESC, tasks.id ASC");
+      $kver=mysqli_query_wrapper($dblink,"SELECT tasks.id AS task,tasks.chunktime,tasks.priority,tasks.color,tasks.name,tasks.attackcmd,tasks.hashlist,tasks.progress,IFNULL(chunks.sumprog,0) AS sumprog,tasks.keyspace,IFNULL(chunks.pcount,0) AS pcount,IFNULL(chunks.ccount,0) AS ccount,IFNULL(taskfiles.secret,0) AS secret,IF(chunks.lastact>".($cas-$config["chunktimeout"]).",1,0) AS active,IFNULL(assignments.acount,0) AS assigncount,taskfiles.fcount AS filescount,IFNULL(taskfiles.fsize,0) AS filesize,hashlists.name AS hname,hashlists.secret AS hsecret,IF(hashlists.cracked<hashlists.hashcount,1,0) AS hlinc FROM tasks JOIN hashlists ON hashlists.id=tasks.hashlist LEFT JOIN (SELECT task,SUM(cracked) AS pcount,COUNT(1) AS ccount,GREATEST(MAX(dispatchtime),MAX(solvetime)) AS lastact,SUM(progress) AS sumprog FROM chunks GROUP BY task) chunks ON chunks.task=tasks.id LEFT JOIN (SELECT task,COUNT(1) AS acount FROM assignments GROUP BY task) assignments ON assignments.task=tasks.id LEFT JOIN (SELECT taskfiles.task,COUNT(1) AS fcount,SUM(files.size) AS fsize,MAX(files.secret) AS secret FROM taskfiles JOIN files ON files.id=taskfiles.file GROUP BY taskfiles.task) taskfiles ON taskfiles.task=tasks.id ORDER BY tasks.priority DESC, tasks.id ASC");
       echo "List of tasks (".mysqli_num_rows($kver)."): ";
 
       echo "<form action=\"$myself?a=finishedtasksdelete\" method=\"POST\" onSubmit=\"if (!confirm('Really delete all finished tasks?')) return false;\">";
@@ -737,7 +753,11 @@ echo '</ul>
       while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
         $id=$erej["task"];
         $hlist=$erej["hashlist"];
-        echo "<tr><td><a href=\"$myself?a=taskdetail&task=$id\">$id</a></td><td title=\"".$erej["attackcmd"]."\"><a href=\"$myself?a=taskdetail&task=$id\">".$erej["name"]."</a>";
+        echo "<tr><td";
+        if (strlen($erej["color"])>0) {
+          echo " style=\"background-color: #".$erej["color"]."\"";
+        }
+        echo "><a href=\"$myself?a=taskdetail&task=$id\">$id</a></td><td title=\"".$erej["attackcmd"]."\"><a href=\"$myself?a=taskdetail&task=$id\">".$erej["name"]."</a>";
         echo tickdone($erej["sumprog"],$erej["keyspace"]);
         if ($erej["active"]==1 && $erej["sumprog"]<$erej["keyspace"]) echo " <img src=\"img/active.gif\" alt=\"Active\">";
         echo "</td><td>";
@@ -789,13 +809,17 @@ echo '</ul>
 
     case "ptasks":
       // list pre-conf tasks
-      $kver=mysqli_query_wrapper($dblink,"SELECT tasks.id,tasks.name,tasks.attackcmd,tasks.priority,taskfiles.fcount AS filescount,IFNULL(taskfiles.fsize,0) AS filesize,IFNULL(taskfiles.secret,0) AS secret FROM tasks LEFT JOIN (SELECT taskfiles.task,COUNT(1) AS fcount,SUM(files.size) AS fsize,MAX(files.secret) AS secret FROM taskfiles JOIN files ON files.id=taskfiles.file GROUP BY taskfiles.task) taskfiles ON taskfiles.task=tasks.id WHERE tasks.hashlist IS NULL ORDER by tasks.priority DESC, tasks.id ASC");
+      $kver=mysqli_query_wrapper($dblink,"SELECT tasks.id,tasks.name,tasks.color,tasks.attackcmd,tasks.priority,taskfiles.fcount AS filescount,IFNULL(taskfiles.fsize,0) AS filesize,IFNULL(taskfiles.secret,0) AS secret FROM tasks LEFT JOIN (SELECT taskfiles.task,COUNT(1) AS fcount,SUM(files.size) AS fsize,MAX(files.secret) AS secret FROM taskfiles JOIN files ON files.id=taskfiles.file GROUP BY taskfiles.task) taskfiles ON taskfiles.task=tasks.id WHERE tasks.hashlist IS NULL ORDER by tasks.priority DESC, tasks.id ASC");
       echo "List of pre-configured tasks (".mysqli_num_rows($kver)."):";
       echo "<table class=\"styled\">";
       echo "<tr><td>id</td><td>Name</td><td>Attack command</td><td>Files</td><td>Priority</td><td>Action</td></tr>";
       while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
         $id=$erej["id"];
-        echo "<tr><td><a href=\"$myself?a=taskdetail&task=$id\">$id</a></td><td><a href=\"$myself?a=taskdetail&task=$id\">".$erej["name"]."</a>";
+        echo "<tr><td";
+        if (strlen($erej["color"])>0) {
+          echo " style=\"background-color: #".$erej["color"]."\"";
+        }
+        echo "><a href=\"$myself?a=taskdetail&task=$id\">$id</a></td><td><a href=\"$myself?a=taskdetail&task=$id\">".$erej["name"]."</a>";
         echo "</td><td>";
         echo $erej["attackcmd"];
         echo "</td><td>";
@@ -1075,10 +1099,11 @@ echo '</ul>
       $ostatus=$config["statustimer"];
       $oadjust=0;
       $hlist="";
+      $color="";
       if (isset($_GET["task"])) {
         $orig=intval($_GET["task"]);
         if ($orig>0) {
-          $ori=mysqli_query_wrapper($dblink,"SELECT name,attackcmd,chunktime,statustimer,autoadjust,hashlist FROM tasks WHERE id=$orig");
+          $ori=mysqli_query_wrapper($dblink,"SELECT name,attackcmd,chunktime,statustimer,autoadjust,hashlist,color FROM tasks WHERE id=$orig");
           if ($erej=mysqli_fetch_array($ori,MYSQLI_ASSOC)) {
             $oname=$erej["name"]." (copy)";
             $oattack=$erej["attackcmd"];
@@ -1086,6 +1111,7 @@ echo '</ul>
             $ostatus=$erej["statustimer"];
             $oadjust=$erej["autoadjust"];
             $hlist=$erej["hashlist"];
+            $color=$erej["color"];
             if ($hlist=="") $hlist="preconf";
           } else {
             $orig=0;
@@ -1113,6 +1139,7 @@ echo '</ul>
       echo "<tr><td>Chunk size:</td><td><input type=\"text\" name=\"chunk\" value=\"$ochunk\"> seconds</td></tr>";
       echo "<tr><td>Status timer:</td><td><input type=\"text\" name=\"status\" value=\"$ostatus\"> seconds</td></tr>";
       echo "<tr><td>Benchmark:</td><td><input type=\"checkbox\" name=\"autoadjust\" value=\"1\"".($oadjust==1 ? " checked" : "")."> Auto adjust<br>(Not recommended for AMD and/or in combination with small chunks sizes)</td></tr>";
+      echo "<tr><td>Color:</td><td>#<input type=\"text\" name=\"color\" size=\"6\" class=\"color {required:false}\" value=\"$color\"></td></tr>";
       echo "<tr><td colspan=\"2\"><input type=\"submit\" value=\"Create task\"></td></tr>";
       echo "</table>";
       echo "</td><td>";
@@ -1145,6 +1172,12 @@ echo '</ul>
       $autoadj=intval($_POST["autoadjust"]);
       $chunk=intval($_POST["chunk"]);
       $status=intval($_POST["status"]);
+      $color=$_POST["color"];
+      if (preg_match("/[0-9A-Za-z]{6}/",$color)==1) {
+        $color="'$color'";
+      } else {
+       $color="NULL"; 
+      }
       if (strpos($cmdline,$hashlistAlias)===false) {
         echo "Command line must contain hashlist ($hashlistAlias).";
       } else {
@@ -1164,7 +1197,7 @@ echo '</ul>
             mysqli_query_wrapper($dblink,"SET autocommit = 0");
             mysqli_query_wrapper($dblink,"START TRANSACTION");
             echo "Creating task in the DB...";
-            $vysledek=mysqli_query_wrapper($dblink,"INSERT INTO tasks (name, attackcmd, hashlist, chunktime, statustimer, autoadjust) VALUES ('$name', '$cmdline', $hashlist, $chunk, $status, $autoadj)");
+            $vysledek=mysqli_query_wrapper($dblink,"INSERT INTO tasks (name, attackcmd, hashlist, chunktime, statustimer, autoadjust, color) VALUES ('$name', '$cmdline', $hashlist, $chunk, $status, $autoadj, $color)");
             if ($vysledek) {
               // insert succeeded
               $id=mysqli_insert_id($dblink);
@@ -1911,7 +1944,7 @@ echo '</ul>
           echo "</table>";
         }
 
-        $kver=mysqli_query_wrapper($dblink,"SELECT id,name FROM tasks WHERE hashlist IS NULL ORDER BY priority DESC, id ASC");
+        $kver=mysqli_query_wrapper($dblink,"SELECT id,name,color FROM tasks WHERE hashlist IS NULL ORDER BY priority DESC, id ASC");
         if (mysqli_num_rows($kver)>0) {
           echo "</td><td>";
           echo "Create pre-configured tasks:";
@@ -1921,7 +1954,11 @@ echo '</ul>
           echo "<tr><td>id</td><td>Name</td></tr>";
           while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
             $fid=$erej["id"];
-            echo "<tr><td>$fid</td><td><input type=\"checkbox\" name=\"task[]\" value=\"$fid\">".$erej["name"]."</td></tr>";
+            echo "<tr><td";
+            if (strlen($erej["color"])>0) {
+              echo " style=\"background-color: #".$erej["color"]."\"";
+            }
+            echo ">$fid</td><td><input type=\"checkbox\" name=\"task[]\" value=\"$fid\">".$erej["name"]."</td></tr>";
           }
           echo "<tr><td colspan=\"2\"><input type=\"submit\" value=\"Create\"> <input type=\"checkbox\" onChange=\"javascript:checkAll('preconf',this.checked);\">Select All</td></tr>";
           echo "</table>";
@@ -2409,6 +2446,14 @@ echo '</ul>
       echo "<input type=\"checkbox\" name=\"auto\" value=\"1\"";
       if ($erej["autoadjust"]==1) echo " checked";
       echo " onChange=\"javascript:document.getElementById('taskauto').submit();\"> Autoadjust by default";
+      echo "</form>";
+      echo "</td></tr>";
+      echo "<tr><td>Color:</td><td>";
+      echo "<form id=\"taskcolor\" action=\"$myself?a=taskcolor\" method=\"POST\">";
+      echo "<input type=\"hidden\" name=\"return\" value=\"a=taskdetail&task=$task\">";
+      echo "<input type=\"hidden\" name=\"task\" value=\"$id\">";
+      echo "#<input type=\"text\" size=\"6\" name=\"color\" class=\"color {required:false}\" value=\"".$erej["color"]."\">";
+      echo "<input type=\"submit\" value=\"Set\">";
       echo "</form>";
       echo "</td></tr>";
       echo "<tr><td>Status timer:</td><td>".$erej["statustimer"]." seconds</td></tr>";

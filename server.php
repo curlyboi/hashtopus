@@ -594,7 +594,7 @@ switch ($action) {
           // update progress inside a chunk and chunk cache
           mysqli_query_wrapper($dblink,"UPDATE chunks SET rprogress=$rp,progress=$prog,solvetime=$cas,state=$state WHERE id=$cid");
         } else {
-          file_put_contents("server_solve.txt",var_export($_POST,true),"\n",FILE_APPEND);
+          file_put_contents("server_solve.txt",var_export($_POST,true)."\n",FILE_APPEND);
         }
 
 

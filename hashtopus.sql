@@ -309,6 +309,7 @@ CREATE TABLE `tasks` (
   `keyspace` bigint(20) NOT NULL DEFAULT '0' COMMENT 'Keyspace size (calculated by Hashcat)',
   `progress` bigint(20) NOT NULL DEFAULT '0' COMMENT 'How far have chunks been dispatched',
   `priority` int(11) NOT NULL DEFAULT '0' COMMENT 'Assignment priority',
+  `color` varchar(6) COLLATE latin1_bin DEFAULT NULL COMMENT 'Color of task shown in admin',
   PRIMARY KEY (`id`),
   KEY `adm_usage` (`hashlist`),
   KEY `autoassign` (`progress`,`keyspace`,`priority`)
@@ -340,7 +341,7 @@ CREATE TABLE `zapqueue` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-06-15 21:46:04
+-- Dump completed on 2014-06-23 11:38:14
 INSERT INTO `hashcatreleases` (`version`, `time`, `url_nvidia`, `url_amd`, `common_files`, `32_nvidia`, `64_nvidia`, `32_amd`, `64_amd`, `rootdir_nvidia`, `rootdir_amd`, `minver_nvidia`, `minver_amd`) VALUES
 ('1.21', UNIX_TIMESTAMP(), 'http://hashcat.net/files/cudaHashcat-1.21.7z', 'http://hashcat.net/files/oclHashcat-1.21.7z', 'hashcat.hcstat', 'kernels/4318/*32.ptx', 'kernels/4318/*64.ptx', 'kernels/4098/*.llvmir', 'kernels/4098/*.llvmir', 'cudaHashcat-1.21', 'oclHashcat-1.21', 33167, 1404);
 
