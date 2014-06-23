@@ -1944,6 +1944,7 @@ echo '</ul>
           echo "</table>";
         }
 
+        // preconf tasks
         $kver=mysqli_query_wrapper($dblink,"SELECT id,name,color FROM tasks WHERE hashlist IS NULL ORDER BY priority DESC, id ASC");
         if (mysqli_num_rows($kver)>0) {
           echo "</td><td>";
@@ -1958,7 +1959,7 @@ echo '</ul>
             if (strlen($erej["color"])>0) {
               echo " style=\"background-color: #".$erej["color"]."\"";
             }
-            echo ">$fid</td><td><input type=\"checkbox\" name=\"task[]\" value=\"$fid\">".$erej["name"]."</td></tr>";
+            echo "><a href=\"$myself?a=taskdetail&task=$fid\">$fid</a></td><td><input type=\"checkbox\" name=\"task[]\" value=\"$fid\"><a href=\"$myself?a=taskdetail&task=$fid\">".$erej["name"]."</a></td></tr>";
           }
           echo "<tr><td colspan=\"2\"><input type=\"submit\" value=\"Create\"> <input type=\"checkbox\" onChange=\"javascript:checkAll('preconf',this.checked);\">Select All</td></tr>";
           echo "</table>";
@@ -2514,11 +2515,13 @@ echo '</ul>
       }
       echo "</table>";
 
-      echo "<br><table class=\"styled\">";
-      echo "<tr><td>Visual representation</td></tr>";
-      echo "<tr><td><img style=\"width: 800px; height: 32px\" src=\"taskimg.php?task=$task&x=800&y=32\"></td></tr>";
-      echo "</table>";
-      
+      if ($hlist!="") {
+        // graph only for regular tasks
+        echo "<br><table class=\"styled\">";
+        echo "<tr><td>Visual representation</td></tr>";
+        echo "<tr><td><img style=\"width: 800px; height: 32px\" src=\"taskimg.php?task=$task&x=800&y=32\"></td></tr>";
+        echo "</table>";
+      }
       
       $kver=mysqli_query_wrapper($dblink,"SELECT files.id,files.filename,files.size,files.secret FROM taskfiles JOIN files ON files.id=taskfiles.file WHERE task=$task ORDER BY filename");
       if (mysqli_num_rows($kver)>0) {
