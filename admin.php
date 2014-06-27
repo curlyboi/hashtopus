@@ -1,5 +1,5 @@
 <?php
-$htpver="0.8.7";
+$htpver="0.8.8";
 $htphost=$_SERVER['HTTP_HOST'];
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);
@@ -146,7 +146,7 @@ echo '</ul>
   //$workloads=array(1=>"Low utilization",2=>"Default profile",3=>"High utilization");
   $oses=array("<img src=\"img/win.png\" alt=\"Win\" title=\"Windows\">","<img src=\"img/unix.png\" alt=\"Unix\" title=\"Linux\">");
   $states=array("New","Init","Running","Paused","Exhausted","Cracked","Aborted","Quit","Bypass","Trimmed");
-  $formats=array("Text","WPA/WPA2","Binary","Superhashlist");
+  $formats=array("Text","HCCAP","Binary","Superhashlist");
   $formattables=array("hashes","hashes_binary","hashes_binary");
   $uperrs=array("","Uploaded file is too big for server settings, use different transfer method (i.e. FTP) and run directory scan in Task detail","Uploaded file is too big for form setting. Have you been playing with admin again?!","File upload was interrupted","No file was uploaded","","Server doesn't have a temporary folder","Failed writing to disk. Maybe no space left or >2GB file on FAT32","Some PHP module stopped the transfer");
   switch ($_GET["a"]) {
@@ -1513,7 +1513,7 @@ echo '</ul>
                           $chyby++;
                         }
                       } else {
-                        echo "Found garbage (only ".strlen($dato)." bytes)";
+                        if (strlen($dato)>0) echo "Found garbage (only ".strlen($dato)." bytes)";
                       }
                       echo "<br>";
                     }
