@@ -2114,7 +2114,7 @@ echo '</ul>
         case "task":
           echo "<input type=\"hidden\" name=\"task\" value=\"$task\">";
           echo "Hashes of task <a href=\"$myself?a=taskdetail&task=$task\">".$er["name"]."</a>, filter: ";
-          $viewfilter="JOIN chunks ON chunk=chunks.id WHERE hashes.chunk IS NOT NULL AND chunks.task=$task";
+          $viewfilter="JOIN chunks ON chunk=chunks.id WHERE ".$formattables[$format].".chunk IS NOT NULL AND chunks.task=$task";
           break;
           
         case "hashlist":
