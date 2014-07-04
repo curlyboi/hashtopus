@@ -288,7 +288,7 @@ echo '</ul>
       } else {
         $ori=mysqli_query_wrapper($dblink,"SELECT task FROM assignments WHERE agent=$agid");
         // keep the clever pre-bench query in variable
-        $asskv="ROUND(IFNULL((SELECT tasks.chunktime*length/(solvetime-dispatchtime) FROM chunks JOIN tasks ON chunks.task=tasks.id WHERE chunks.solvetime>chunks.dispatchtime AND chunks.progress=chunks.length AND chunks.state IN (4,5) AND chunks.agent=$agid AND tasks.id=$task ORDER BY chunks.solvetime DESC LIMIT 1),0))";
+        $asskv="IFNULL((SELECT length FROM chunks WHERE solvetime>dispatchtime AND progress=length AND state IN (4,5) AND agent=$agid AND task=$task ORDER BY solvetime DESC LIMIT 1),0)";
         if ($terej=mysqli_fetch_array($ori,MYSQLI_ASSOC)) {
           // agent was assigned to something, change the assignment
           $vysledek=mysqli_query_wrapper($dblink,"UPDATE assignments JOIN tasks ON tasks.id=$task SET assignments.task=tasks.id,assignments.benchmark=$asskv,assignments.autoadjust=tasks.autoadjust,assignments.speed=0 WHERE assignments.agent=$agid");

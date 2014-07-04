@@ -209,7 +209,7 @@ switch ($action) {
             // the current task is done or the next one has higher priority
             
             // so reassign the agent to the next one
-            mysqli_query_wrapper($dblink,"UPDATE assignments SET assignments.task=".$erenew["id"].",benchmark=ROUND(IFNULL((SELECT tasks.chunktime*chunks.length/(chunks.solvetime-chunks.dispatchtime) FROM chunks JOIN tasks ON chunks.task=tasks.id WHERE chunks.solvetime>chunks.dispatchtime AND chunks.progress=chunks.length AND chunks.state IN (4,5) AND chunks.agent=".$ere["this"]." AND tasks.id=".$erenew["id"]." ORDER BY chunks.solvetime DESC LIMIT 1),0)),assignments.speed=0,assignments.autoadjust=".$erenew["autotask"]." WHERE assignments.agent=".$ere["this"]);
+            mysqli_query_wrapper($dblink,"UPDATE assignments SET task=".$erenew["id"].",benchmark=IFNULL((SELECT length FROM chunks WHERE solvetime>dispatchtime AND progress=length AND state IN (4,5) AND agent=".$ere["this"]." AND task=".$erenew["id"]." ORDER BY solvetime DESC LIMIT 1),0),speed=0,autoadjust=".$erenew["autotask"]." WHERE agent=".$ere["this"]);
             // but keep agressivity of the previous one
             $ere=$erenew;
           }
@@ -232,7 +232,7 @@ switch ($action) {
         }
       } else {
         // the first line is the task to be assigned to (agent is not assigned to anything)
-        mysqli_query_wrapper($dblink,"INSERT INTO assignments (agent,task,autoadjust,benchmark) SELECT agents.id,".$ere["id"].",".$ere["autotask"].",ROUND(IFNULL(tasks.chunktime*chunks.length/(chunks.solvetime-chunks.dispatchtime),0)) FROM agents LEFT JOIN chunks ON agents.id=chunks.agent AND chunks.solvetime>chunks.dispatchtime AND chunks.state IN (4,5) AND chunks.progress=chunks.length LEFT JOIN tasks ON chunks.task=tasks.id AND tasks.id=".$ere["id"]." WHERE agents.token='$token' ORDER BY chunks.solvetime DESC LIMIT 1");
+        mysqli_query_wrapper($dblink,"INSERT INTO assignments (agent,task,autoadjust,benchmark) SELECT agents.id,".$ere["id"].",".$ere["autotask"].",IFNULL(chunks.length,0) FROM agents LEFT JOIN chunks ON agents.id=chunks.agent AND chunks.solvetime>chunks.dispatchtime AND chunks.state IN (4,5) AND chunks.progress=chunks.length AND chunks.task=".$ere["id"]." WHERE agents.token='$token' ORDER BY chunks.solvetime DESC LIMIT 1");
       }
 
       // ok, we have something to begin with
