@@ -561,9 +561,9 @@ switch ($action) {
       $subtr=($skip*$rtotal)/($skip+$length);
       $rprog-=$subtr;
       $rtotal-=$subtr;
-      $prog=$prog-$skip;
+      if ($prog>0) $prog-=$skip;
       
-      // workaround for hashcat overshooting its boundaries sometimes
+      // workaround for hashcat overshooting its curku boundaries sometimes
       if ($state==4) $rprog=$rtotal;
 
       if ($rprog<=$rtotal) {
@@ -594,7 +594,7 @@ switch ($action) {
           // update progress inside a chunk and chunk cache
           mysqli_query_wrapper($dblink,"UPDATE chunks SET rprogress=$rp,progress=$prog,solvetime=$cas,state=$state WHERE id=$cid");
         } else {
-          file_put_contents("server_solve.txt",var_export($_POST,true)."\n",FILE_APPEND);
+          file_put_contents("server_solve.txt",var_export($_GET,true).var_export($_POST,true)."\n----------------------------------------\n",FILE_APPEND);
         }
 
 
