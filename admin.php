@@ -1859,7 +1859,7 @@ echo '</ul>
       // show hashlist detail
       echo "<table><tr><td>";
       $hlist=intval($_GET["hashlist"]);
-      $kver=mysqli_query_wrapper($dblink,"SELECT hashlists.*,hashtypes.description FROM hashlists JOIN hashtypes ON hashtypes.id=hashlists.hashtype WHERE hashlists.id=$hlist");
+      $kver=mysqli_query_wrapper($dblink,"SELECT hashlists.*,hashtypes.description FROM hashlists LEFT JOIN hashtypes ON hashtypes.id=hashlists.hashtype WHERE hashlists.id=$hlist");
       if (mysqli_num_rows($kver)==1) {
         $erej=mysqli_fetch_array($kver,MYSQLI_ASSOC);
         $id=$erej["id"];
