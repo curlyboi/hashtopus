@@ -348,7 +348,7 @@ switch ($action) {
     if (mysqli_num_rows($kver)==1) {
       $erej=mysqli_fetch_array($kver,MYSQLI_ASSOC);
       $chunktime=$erej["chunktime"];
-      $bench=intval($erej["benchmark"]);
+      $bench=floatval($erej["benchmark"]);
       $agid=$erej["id"];
       if ($erej["keyspace"]>0) {
         // we know the keyspace already
