@@ -1,5 +1,5 @@
 <?php
-$htpver="0.8.9";
+$htpver="0.9.0";
 $htphost=$_SERVER['HTTP_HOST'];
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);
@@ -10,7 +10,8 @@ function mysqli_query_wrapper($dblink, $query, $bypass=false) {
   $log="\n<!-- $query";
   $time1=microtime(true);
   $kver=mysqli_query($dblink,$query);
-  // comment out this line to ditch the logs
+  // uncomment this line to ditch the logs
+  // $bypass=true
   if ($bypass==false) {
     $time2=microtime(true);
     echo $log;
@@ -2787,6 +2788,7 @@ function shortenstring($co,$kolik) {
 }
 
 function niceround($num,$dec) {
+  // round to specific amount of decimal places
   $stri=strval(round($num,$dec));
   if ($dec>0) {
     $pozice=strpos($stri,".");
@@ -2995,10 +2997,15 @@ function delete_task($task) {
   $vysledek1=mysqli_query_wrapper($dblink,"DELETE FROM assignments WHERE task=$task");
   $vysledek2=$vysledek1 && mysqli_query_wrapper($dblink,"DELETE FROM errors WHERE task=$task");
   $vysledek3=$vysledek2 && mysqli_query_wrapper($dblink,"DELETE FROM taskfiles WHERE task=$task");
-  $vysledek4=$vysledek3 && delete_chunks("task=$task");
-  $vysledek5=$vysledek4 && mysqli_query_wrapper($dblink,"DELETE FROM tasks WHERE id=$task");
+
+  $vysledek4=$vysledek3 && mysqli_query_wrapper($dblink,"UPDATE hashes JOIN chunks ON hashes.chunk=chunks.id AND chunks.task=$task SET chunk=NULL");
+  $vysledek5=$vysledek4 && mysqli_query_wrapper($dblink,"UPDATE hashes_binary JOIN chunks ON hashes_binary.chunk=chunks.id AND chunks.task=$task SET chunk=NULL");
+  $vysledek6=$vysledek5 && mysqli_query_wrapper($dblink,"DELETE FROM zapqueue WHERE chunk IN (SELECT id FROM chunks WHERE task=$task)");
+  $vysledek7=$vysledek6 && mysqli_query_wrapper($dblink,"DELETE FROM chunks WHERE task=$task");
+
+  $vysledek8=$vysledek7 && mysqli_query_wrapper($dblink,"DELETE FROM tasks WHERE id=$task");
   
-  return ($vysledek5);
+  return ($vysledek8);
 }
 
 function delete_agent($agent) {
@@ -3009,25 +3016,16 @@ function delete_agent($agent) {
   $vysledek2=$vysledek1 && mysqli_query_wrapper($dblink,"DELETE FROM errors WHERE agent=$agent");
   $vysledek3=$vysledek2 && mysqli_query_wrapper($dblink,"DELETE FROM hashlistusers WHERE agent=$agent");
   $vysledek4=$vysledek3 && mysqli_query_wrapper($dblink,"DELETE FROM zapqueue WHERE agent=$agent");
-  $vysledek5=$vysledek4 && delete_chunks("agent=$agent");
-  $vysledek6=$vysledek5 && mysqli_query_wrapper($dblink,"DELETE FROM agents WHERE id=$agent");
+
+  // orphan the chunks
+  $vysledek5=$vysledek4 && mysqli_query_wrapper($dblink,"UPDATE hashes JOIN chunks ON hashes.chunk=chunks.id AND chunks.agent=$agent SET chunk=NULL");
+  $vysledek6=$vysledek5 && mysqli_query_wrapper($dblink,"UPDATE hashes_binary JOIN chunks ON hashes_binary.chunk=chunks.id AND chunks.agent=$agent SET chunk=NULL");
+  $vysledek7=$vysledek6 && mysqli_query_wrapper($dblink,"UPDATE chunks SET agent=NULL WHERE agent=$agent");
+
+  $vysledek8=$vysledek7 && mysqli_query_wrapper($dblink,"DELETE FROM agents WHERE id=$agent");
   
-  return ($vysledek6);
+  return ($vysledek8);
 }
-
-function delete_chunks($wat) {
-  // delete chunks based on condition
-  global $dblink;
-
-  $inq="SELECT id FROM chunks WHERE ".$wat;
-  $vysledek1=mysqli_query_wrapper($dblink,"UPDATE hashes JOIN chunks ON hashes.chunk=chunks.id AND chunks.$wat SET chunk=NULL");
-  $vysledek2=$vysledek1 && mysqli_query_wrapper($dblink,"UPDATE hashes_binary JOIN chunks ON hashes_binary.chunk=chunks.id AND chunks.$wat SET chunk=NULL");
-  $vysledek3=$vysledek2 && mysqli_query_wrapper($dblink,"DELETE FROM zapqueue WHERE chunk IN ($inq)");
-  $vysledek4=$vysledek3 && mysqli_query_wrapper($dblink,"DELETE FROM chunks WHERE ".$wat);
-  
-  return ($vysledek4);
-}
-
 
 $endtime=microtime(true);
 echo "<!-- Load time: ".($endtime-$loadtime)."ms -->";
