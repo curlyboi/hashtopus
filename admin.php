@@ -1,5 +1,5 @@
 <?php
-$htpver="0.9.0";
+$htpver="0.9.1";
 $htphost=$_SERVER['HTTP_HOST'];
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);
@@ -146,7 +146,7 @@ echo '</ul>
   $platforms=array("unknown","NVidia","AMD");
   //$workloads=array(1=>"Low utilization",2=>"Default profile",3=>"High utilization");
   $oses=array("<img src=\"img/win.png\" alt=\"Win\" title=\"Windows\">","<img src=\"img/unix.png\" alt=\"Unix\" title=\"Linux\">");
-  $states=array("New","Init","Running","Paused","Exhausted","Cracked","Aborted","Quit","Bypass","Trimmed");
+  $states=array("New","Init","Running","Paused","Exhausted","Cracked","Aborted","Quit","Bypass","Trimmed","Aborting...");
   $formats=array("Text","HCCAP","Binary","Superhashlist");
   $formattables=array("hashes","hashes_binary","hashes_binary");
   $uperrs=array("","Uploaded file is too big for server settings, use different transfer method (i.e. FTP) and run directory scan in Task detail","Uploaded file is too big for form setting. Have you been playing with admin again?!","File upload was interrupted","No file was uploaded","","Server doesn't have a temporary folder","Failed writing to disk. Maybe no space left or >2GB file on FAT32","Some PHP module stopped the transfer");
@@ -497,6 +497,15 @@ echo '</ul>
       $vysledek=mysqli_query_wrapper($dblink,"UPDATE chunks SET state=0,progress=0,rprogress=0,dispatchtime=$cas,solvetime=0 WHERE id=$chunk");
       if (!$vysledek) {
         echo "<script>alert('Could not reset chunk!');</script>";
+      }
+      break;
+      
+    case "chunkabort";
+      // reset chunk state and progress to zero
+      $chunk=intval($_POST["chunk"]);
+      $vysledek=mysqli_query_wrapper($dblink,"UPDATE chunks SET state=10 WHERE id=$chunk");
+      if (!$vysledek) {
+        echo "<script>alert('Could not abort chunk!');</script>";
       }
       break;
       
@@ -2654,6 +2663,11 @@ echo '</ul>
             echo "<input type=\"hidden\" name=\"return\" value=\"a=taskdetail&task=$task\">";
             echo "<input type=\"hidden\" name=\"chunk\" value=\"$id\">";
             echo "<input type=\"submit\" value=\"Reset\"></form>";
+          } else {
+            echo "<form action=\"$myself?a=chunkabort\" method=\"POST\" onSubmit=\"if (!confirm('Really abort cracking chunk $id?')) return false;\">";
+            echo "<input type=\"hidden\" name=\"return\" value=\"a=taskdetail&task=$task\">";
+            echo "<input type=\"hidden\" name=\"chunk\" value=\"$id\">";
+            echo "<input type=\"submit\" value=\"Abort\"></form>";
           }
           echo "</td></tr>";
         }

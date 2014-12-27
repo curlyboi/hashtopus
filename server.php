@@ -358,7 +358,7 @@ switch ($action) {
           if ($bench>0) {
             // valid agent benchmark
             mysqli_query_wrapper($dblink,"START TRANSACTION");
-            $kver=mysqli_query_wrapper($dblink,"SELECT chunks.id,chunks.length,chunks.skip,chunks.progress,chunks.agent,chunks.dispatchtime FROM chunks JOIN tasks ON chunks.task=tasks.id WHERE chunks.task=$task AND chunks.progress<chunks.length AND ((GREATEST(chunks.dispatchtime,chunks.solvetime)<".($cas-$config["chunktimeout"])." AND (chunks.agent!=$agid OR chunks.agent IS NULL)) OR (chunks.agent=$agid) OR (chunks.state=6)) ORDER BY chunks.skip ASC LIMIT 1");
+            $kver=mysqli_query_wrapper($dblink,"SELECT chunks.id,chunks.length,chunks.skip,chunks.progress,chunks.agent,chunks.dispatchtime FROM chunks JOIN tasks ON chunks.task=tasks.id WHERE chunks.task=$task AND chunks.progress<chunks.length AND ((GREATEST(chunks.dispatchtime,chunks.solvetime)<".($cas-$config["chunktimeout"])." AND (chunks.agent!=$agid OR chunks.agent IS NULL)) OR (chunks.agent=$agid) OR (chunks.state=6) OR (chunks.state=10)) ORDER BY chunks.skip ASC LIMIT 1");
             $createnew=false;
             $cid=-1;
             if ($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
@@ -536,7 +536,7 @@ switch ($action) {
     $speed=floatval($_GET["speed"]);
     $state=intval($_GET["state"]);
 
-    $kvery=mysqli_query_wrapper($dblink,"SELECT chunks.dispatchtime,chunks.skip,chunks.length,agents.id AS agid,agents.trusted,agents.os,tasks.id AS otask,tasks.statustimer,assignments.autoadjust,tasks.hashlist,tasks.chunktime,tasks.progress,tasks.keyspace,hashlists.format,assignments.task,assignments.benchmark FROM chunks JOIN agents ON chunks.agent=agents.id JOIN tasks ON chunks.task=tasks.id JOIN hashlists ON tasks.hashlist=hashlists.id LEFT JOIN assignments ON assignments.task=tasks.id AND assignments.agent=agents.id WHERE chunks.id=$cid AND agents.token='$token' AND agents.trusted>=hashlists.secret");
+    $kvery=mysqli_query_wrapper($dblink,"SELECT chunks.dispatchtime,chunks.skip,chunks.length,chunks.state,agents.id AS agid,agents.trusted,agents.os,tasks.id AS otask,tasks.statustimer,assignments.autoadjust,tasks.hashlist,tasks.chunktime,tasks.progress,tasks.keyspace,hashlists.format,assignments.task,assignments.benchmark FROM chunks JOIN agents ON chunks.agent=agents.id JOIN tasks ON chunks.task=tasks.id JOIN hashlists ON tasks.hashlist=hashlists.id LEFT JOIN assignments ON assignments.task=tasks.id AND assignments.agent=agents.id WHERE chunks.id=$cid AND agents.token='$token' AND agents.trusted>=hashlists.secret");
     if (mysqli_num_rows($kvery)==1) {
       // agent is assigned to this chunk (not necessarily task!)
       // it can be already assigned to other task, but is still computing this chunk until it realizes it
@@ -549,6 +549,7 @@ switch ($action) {
       $hlist=$erej["hashlist"];
       $skip=$erej["skip"];
       $length=$erej["length"];
+      $cstate=$erej["state"];
       $chunktime=$erej["chunktime"];
       $statustimer=$erej["statustimer"];
       $dispatchtime=$erej["dispatchtime"];
@@ -596,7 +597,6 @@ switch ($action) {
         } else {
           file_put_contents("server_solve.txt",var_export($_GET,true).var_export($_POST,true)."\n----------------------------------------\n",FILE_APPEND);
         }
-
 
         // handle superhashlist
         if ($format==3) {
@@ -727,98 +727,109 @@ switch ($action) {
         }
 
         if ($errors==0) {
-          echo "solve_ok".$separator.$cracked.$separator.$skipped;
-          $taskdone=false;
-          if ($rprog==$rtotal && $taskprog==$keyspace) {
-            // chunk is done and the task has been fully dispatched
-            $incq=mysqli_query_wrapper($dblink,"SELECT COUNT(1) AS incomplete FROM chunks WHERE task=$task AND rprogress<10000");
-            $iner=mysqli_fetch_array($incq,MYSQLI_ASSOC);
-            if ($iner["incomplete"]==0) {
-              // this was the last incomplete chunk!
-              $taskdone=true;
-            }
-          }
           
-          if ($taskdone) {
-            // task is fully dispatched and this last chunk is done, deprioritize it
-            mysqli_query_wrapper($dblink,"UPDATE tasks SET priority=0 WHERE id=$task");
-          }
-
-          switch ($state) {
-            case 4:
-              // the chunk has finished (exhausted)
-              if ($length==$bench && $task==$otask && $autoadj==1 && $taskdone==false) {
-                // the chunk was originaly meant for this agent, the autoadjust is on, the agent is still at this task and the task is not done
-                $delka=$cas-$dispatchtime;
-                $newbench=($bench/$delka)*$chunktime;
-                // update the benchmark
-                mysqli_query_wrapper($dblink,"UPDATE assignments SET benchmark=$newbench WHERE task=$task AND agent=$agid");
-              }
-              break;
+          if ($cstate==10) {
             
-            case 5:
-              // the chunk has finished (cracked whole hashlist)
-              // deprioritize all tasks and unassign all agents
-              if ($superhash && $hlistyzap==$hlisty) {
-                if ($hlistyzap!="") $hlistyzap.=",";
-                $hlistyzap.=$hlist;
+            // the chunk was manually interrupted
+            mysqli_query_wrapper($dblink,"UPDATE chunks SET state=6 WHERE id=$cid");
+            echo "solve_nok".$separator."Chunk was manually interrupted.";
+          
+          } else {
+          
+            // just inform the agent about the results
+            echo "solve_ok".$separator.$cracked.$separator.$skipped;
+            $taskdone=false;
+            if ($rprog==$rtotal && $taskprog==$keyspace) {
+              // chunk is done and the task has been fully dispatched
+              $incq=mysqli_query_wrapper($dblink,"SELECT COUNT(1) AS incomplete FROM chunks WHERE task=$task AND rprogress<10000");
+              $iner=mysqli_fetch_array($incq,MYSQLI_ASSOC);
+              if ($iner["incomplete"]==0) {
+                // this was the last incomplete chunk!
+                $taskdone=true;
               }
-              mysqli_query_wrapper($dblink,"UPDATE tasks SET priority=0 WHERE hashlist IN ($hlistyzap)");
-              break;
-              
-            case 6:
-              // the chunk was aborted
-              break;
-              
-            default:
-              // the chunk isn't finished yet, we will send zaps
-              $verif=mysqli_query_wrapper($dblink,"SELECT 1 FROM hashlists WHERE id IN ($hlistyzap) AND cracked<hashcount");
-              if (mysqli_num_rows($verif)>0) {
-                // there are some hashes left uncracked in this (super)hashlist
-                if ($task==$otask) {
-                  // if the agent is still assigned, update its speed
-                  mysqli_query_wrapper($dblink,"UPDATE assignments SET speed=$speed WHERE agent=$agid AND task=$task");
-                }
-                
-                echo $separator;
-                mysqli_query_wrapper($dblink,"START TRANSACTION");
-                switch ($format) {
-                  case 0:
-                    // return text zaps
-                    $kvery=mysqli_query_wrapper($dblink,"SELECT hashes.hash, hashes.salt FROM hashes JOIN zapqueue ON hashes.hashlist=zapqueue.hashlist AND zapqueue.agent=$agid AND hashes.time=zapqueue.time AND hashes.chunk=zapqueue.chunk WHERE hashes.hashlist IN ($hlistyzap)");
-                    $pocet=mysqli_num_rows($kvery);
-                    break;
-                    
-                  case 1:
-                    // return hccap zaps (essids)
-                    $kvery=mysqli_query_wrapper($dblink,"SELECT hashes_binary.essid AS hash, '' AS salt FROM hashes_binary JOIN zapqueue ON hashes_binary.hashlist=zapqueue.hashlist AND zapqueue.agent=$agid AND hashes_binary.time=zapqueue.time AND hashes_binary.chunk=zapqueue.chunk WHERE hashes_binary.hashlist IN ($hlistyzap)");
-                    $pocet=mysqli_num_rows($kvery);
-                    break;
-                    
-                  case 2:
-                    // binary hashes don't need zaps, there is just one hash
-                    $pocet=0;
-                }
+            }
+            
+            if ($taskdone) {
+              // task is fully dispatched and this last chunk is done, deprioritize it
+              mysqli_query_wrapper($dblink,"UPDATE tasks SET priority=0 WHERE id=$task");
+            }
 
-                if ($pocet>0) {
-                  echo "zap_ok".$separator.$pocet.$newline;
-                  // list the zapped hashes
-                  while ($erej=mysqli_fetch_array($kvery,MYSQLI_ASSOC)) {
-                    echo $erej["hash"];
-                    if ($erej["salt"]!="") echo $separator.$erej["salt"];
-                    echo $newline;
-                  }
-                } else {
-                  echo "zap_no".$separator."0".$newline;
+            switch ($state) {
+              case 4:
+                // the chunk has finished (exhausted)
+                if ($length==$bench && $task==$otask && $autoadj==1 && $taskdone==false) {
+                  // the chunk was originaly meant for this agent, the autoadjust is on, the agent is still at this task and the task is not done
+                  $delka=$cas-$dispatchtime;
+                  $newbench=($bench/$delka)*$chunktime;
+                  // update the benchmark
+                  mysqli_query_wrapper($dblink,"UPDATE assignments SET benchmark=$newbench WHERE task=$task AND agent=$agid");
                 }
-                // update hashlist age for agent to this task
-                mysqli_query_wrapper($dblink,"DELETE FROM zapqueue WHERE hashlist IN ($hlistyzap) AND agent=$agid");
-                mysqli_query_wrapper($dblink,"COMMIT");
-              } else {
-                // kill the cracking agent, the (super)hashlist was done
-                echo "stop";
-              }
-              break;
+                break;
+              
+              case 5:
+                // the chunk has finished (cracked whole hashlist)
+                // deprioritize all tasks and unassign all agents
+                if ($superhash && $hlistyzap==$hlisty) {
+                  if ($hlistyzap!="") $hlistyzap.=",";
+                  $hlistyzap.=$hlist;
+                }
+                mysqli_query_wrapper($dblink,"UPDATE tasks SET priority=0 WHERE hashlist IN ($hlistyzap)");
+                break;
+                
+              case 6:
+                // the chunk was aborted
+                break;
+                
+              default:
+                // the chunk isn't finished yet, we will send zaps
+                $verif=mysqli_query_wrapper($dblink,"SELECT 1 FROM hashlists WHERE id IN ($hlistyzap) AND cracked<hashcount");
+                if (mysqli_num_rows($verif)>0) {
+                  // there are some hashes left uncracked in this (super)hashlist
+                  if ($task==$otask) {
+                    // if the agent is still assigned, update its speed
+                    mysqli_query_wrapper($dblink,"UPDATE assignments SET speed=$speed WHERE agent=$agid AND task=$task");
+                  }
+                  
+                  echo $separator;
+                  mysqli_query_wrapper($dblink,"START TRANSACTION");
+                  switch ($format) {
+                    case 0:
+                      // return text zaps
+                      $kvery=mysqli_query_wrapper($dblink,"SELECT hashes.hash, hashes.salt FROM hashes JOIN zapqueue ON hashes.hashlist=zapqueue.hashlist AND zapqueue.agent=$agid AND hashes.time=zapqueue.time AND hashes.chunk=zapqueue.chunk WHERE hashes.hashlist IN ($hlistyzap)");
+                      $pocet=mysqli_num_rows($kvery);
+                      break;
+                      
+                    case 1:
+                      // return hccap zaps (essids)
+                      $kvery=mysqli_query_wrapper($dblink,"SELECT hashes_binary.essid AS hash, '' AS salt FROM hashes_binary JOIN zapqueue ON hashes_binary.hashlist=zapqueue.hashlist AND zapqueue.agent=$agid AND hashes_binary.time=zapqueue.time AND hashes_binary.chunk=zapqueue.chunk WHERE hashes_binary.hashlist IN ($hlistyzap)");
+                      $pocet=mysqli_num_rows($kvery);
+                      break;
+                      
+                    case 2:
+                      // binary hashes don't need zaps, there is just one hash
+                      $pocet=0;
+                  }
+
+                  if ($pocet>0) {
+                    echo "zap_ok".$separator.$pocet.$newline;
+                    // list the zapped hashes
+                    while ($erej=mysqli_fetch_array($kvery,MYSQLI_ASSOC)) {
+                      echo $erej["hash"];
+                      if ($erej["salt"]!="") echo $separator.$erej["salt"];
+                      echo $newline;
+                    }
+                  } else {
+                    echo "zap_no".$separator."0".$newline;
+                  }
+                  // update hashlist age for agent to this task
+                  mysqli_query_wrapper($dblink,"DELETE FROM zapqueue WHERE hashlist IN ($hlistyzap) AND agent=$agid");
+                  mysqli_query_wrapper($dblink,"COMMIT");
+                } else {
+                  // kill the cracking agent, the (super)hashlist was done
+                  echo "stop";
+                }
+                break;
+            }
           }
         } else {
           echo "solve_nok".$separator.$errors." occured when updating hashes.";
