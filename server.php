@@ -664,7 +664,6 @@ switch ($action) {
               if ($dato=="") continue;
               $elementy=explode($separator,$dato);
               $podminka="";
-              $plain="";
               switch ($format) {
                 case 0:
                   // save regular password
@@ -672,18 +671,17 @@ switch ($action) {
                   switch (count($elementy)) {
                     case 2:
                       // unsalted hashes
+                      $salt='';
                       $plain=mysqli_real_escape_string($dblink,$elementy[1]);
-                      $podminka="$tbl.hash='$hash'";
                       break;
                       
                     case 3:
                       // salted hashes
                       $salt=mysqli_real_escape_string($dblink,$elementy[1]);
                       $plain=mysqli_real_escape_string($dblink,$elementy[2]);
-                      $podminka="$tbl.hash='$hash' AND $tbl.salt='$salt'";
                       break;
                   }
-                  
+                  $podminka="$tbl.hash='$hash' AND $tbl.salt='$salt'";
                   break;
                   
                 case 1:
