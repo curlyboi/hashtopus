@@ -1,5 +1,5 @@
 <?php
-$htpver="0.9.1";
+$htpver="0.9.2";
 $htphost=$_SERVER['HTTP_HOST'];
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);
@@ -682,7 +682,7 @@ echo '</ul>
           if ($id>0) {
             $kv=mysqli_query_wrapper($dblink,"SELECT name,attackcmd,chunktime,statustimer,autoadjust,priority FROM tasks WHERE tasks.id=$id");
             $erej=mysqli_fetch_array($kv,MYSQLI_ASSOC);
-            $addq=mysqli_query_wrapper($dblink,"INSERT INTO tasks (name, attackcmd, hashlist, chunktime, statustimer, autoadjust, priority) VALUES ('HL".$hlist."_".$erej["name"]."', '".$erej["attackcmd"]."', $hlist, ".$erej["chunktime"].", ".$erej["statustimer"].", ".$erej["autoadjust"].", ".($erej["priority"]>0 ? $base+$erej["priority"] : 0).")");
+            $addq=mysqli_query_wrapper($dblink,"INSERT INTO tasks (name, attackcmd, hashlist, chunktime, statustimer, autoadjust, priority) VALUES ('HL".$hlist."_".mysqli_real_escape_string($erej["name"])."', '".mysqli_real_escape_string($erej["attackcmd"])."', $hlist, ".$erej["chunktime"].", ".$erej["statustimer"].", ".$erej["autoadjust"].", ".($erej["priority"]>0 ? $base+$erej["priority"] : 0).")");
             $addc+=mysqli_affected_rows($dblink);
             $tid=mysqli_insert_id($dblink);
             $filq=mysqli_query_wrapper($dblink,"INSERT INTO taskfiles (task, file) SELECT $tid,file FROM taskfiles WHERE task=$id"); 
@@ -900,7 +900,7 @@ echo '</ul>
       echo "<tr><td>id</td><td>Name</td><td>Hash type</td><td>Cracked</td><td>Hashlists</td><td>Pre-cracked</td><td>Action</td></tr>";
       while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
         $id=$erej["id"];
-        echo "<tr><td><a href=\"$myself?a=hashlistdetail&hashlist=$id\">$id</a></td><td><a href=\"$myself?a=hashlistdetail&hashlist=$id\">".$erej["name"]."</a>";
+        echo "<tr><td><a href=\"$myself?a=fil&hashlist=$id\">$id</a></td><td><a href=\"$myself?a=hashlistdetail&hashlist=$id\">".$erej["name"]."</a>";
         if ($erej["secret"]==1) echo " <img src=\"img/lock.gif\" alt=\"Secret\">";
         echo tickdone($erej["cracked"],$erej["hashcount"]);
         echo "</td><td>";
