@@ -171,7 +171,7 @@ DROP TABLE IF EXISTS `hashes`;
 CREATE TABLE `hashes` (
   `hashlist` int(11) NOT NULL COMMENT 'Hashlist ID',
   `hash` varchar(512) CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL COMMENT 'Hash',
-  `salt` varchar(20) COLLATE latin1_bin NOT NULL DEFAULT '' COMMENT 'Optional salt',
+  `salt` varchar(64) COLLATE latin1_bin NOT NULL DEFAULT '' COMMENT 'Optional salt',
   `plaintext` varchar(128) COLLATE latin1_bin DEFAULT NULL COMMENT 'Cracked plaintext',
   `time` bigint(20) DEFAULT NULL COMMENT 'Time of crack',
   `chunk` int(11) DEFAULT NULL COMMENT 'Chunk in which the hash was cracked',
@@ -341,9 +341,9 @@ CREATE TABLE `zapqueue` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-12-07 13:34:35
+-- Dump completed on 2015-03-05 15:53:29
 INSERT INTO `hashcatreleases` (`version`, `time`, `url_nvidia`, `url_amd`, `common_files`, `32_nvidia`, `64_nvidia`, `32_amd`, `64_amd`, `rootdir_nvidia`, `rootdir_amd`, `minver_nvidia`, `minver_amd`) VALUES
-('1.31', NOW(), 'http://hashcat.net/files/cudaHashcat-1.31.7z', 'http://hashcat.net/files/oclHashcat-1.31.7z', 'hashcat.hcstat hashcat.keyfile', 'kernels/4318/*32.ptx', 'kernels/4318/*64.ptx', 'kernels/4098/*.llvmir', 'kernels/4098/*.llvmir', 'cudaHashcat-1.31', 'oclHashcat-1.31', 33167, 1409);
+('1.33', NOW(), 'http://hashcat.net/files/cudaHashcat-1.33-nv-pdf-fix.7z', 'http://hashcat.net/files/oclHashcat-1.33.7z', 'hashcat.hcstat hashcat.keyfile', 'kernels/4318/*32.ptx', 'kernels/4318/*64.ptx', 'kernels/4098/*.llvmir', 'kernels/4098/*.llvmir', 'cudaHashcat-1.33', 'oclHashcat-1.33', 34600, 1409);
 
 INSERT INTO `config` (`item`,`value`) VALUES
 ('agenttimeout','30'),
@@ -385,11 +385,11 @@ INSERT INTO `hashtypes` (`id`, `description`) VALUES
 (1430, 'sha256(unicode($pass).$salt)'),
 (1440, 'sha256($salt.unicode($pass))'),
 (1441, 'EPiServer 6.x > v4'),
-(1450, 'HMAC-SHA256 (key, '$pass)'),
-(1460, 'HMAC-SHA256 (key, '$salt)'),
-(150, 'HMAC-SHA1 (key, '$pass)'),
+(1450, 'HMAC-SHA256 (key, $pass)'),
+(1460, 'HMAC-SHA256 (key, $salt)'),
+(150, 'HMAC-SHA1 (key, $pass)'),
 (1500, 'descrypt, DES(Unix), Traditional DES'),
-(160, 'HMAC-SHA1 (key, '$salt)'),
+(160, 'HMAC-SHA1 (key, $salt)'),
 (1600, 'md5apr1, MD5(APR), Apache MD5'),
 (1700, 'SHA512'),
 (1710, 'sha512($pass.$salt)'),
@@ -399,8 +399,8 @@ INSERT INTO `hashtypes` (`id`, `description`) VALUES
 (1730, 'sha512(unicode($pass).$salt)'),
 (1731, 'MSSQL(2012), MSSQL(2014)'),
 (1740, 'sha512($salt.unicode($pass))'),
-(1750, 'HMAC-SHA512 (key, '$pass)'),
-(1760, 'HMAC-SHA512 (key, '$salt)'),
+(1750, 'HMAC-SHA512 (key, $pass)'),
+(1760, 'HMAC-SHA512 (key, $salt)'),
 (1800, 'sha512crypt, SHA512(Unix)'),
 (190, 'sha1(LinkedIn)'),
 (20, 'md5($salt.$pass)'),
@@ -432,7 +432,7 @@ INSERT INTO `hashtypes` (`id`, `description`) VALUES
 (4500, 'Double SHA1'),
 (4700, 'sha1(md5($pass))'),
 (4800, 'MD5(Chap), iSCSI CHAP authentication'),
-(50, 'HMAC-MD5 (key, '$pass)'),
+(50, 'HMAC-MD5 (key, $pass)'),
 (500, 'md5crypt, MD5(Unix), FreeBSD MD5, Cisco-IOS MD5'),
 (5000, 'SHA-3(Keccak)'),
 (501, 'Juniper IVE'),
@@ -444,10 +444,9 @@ INSERT INTO `hashtypes` (`id`, `description`) VALUES
 (5600, 'NetNTLMv2'),
 (5700, 'Cisco-IOS SHA256'),
 (5800, 'Android PIN'),
-(60, 'HMAC-MD5 (key, '$salt)'),
+(60, 'HMAC-MD5 (key, $salt)'),
 (6000, 'RipeMD160'),
 (6100, 'Whirlpool'),
-(62XY, 'TrueCrypt 5.0+ (see below)'),
 (6300, 'AIX {smd5}'),
 (6400, 'AIX {ssha256}'),
 (6500, 'AIX {ssha512}'),
