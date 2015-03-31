@@ -41,6 +41,7 @@ $loadtime=microtime(true);
   <link href='admin.css' rel='stylesheet' type='text/css'>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <!--<META http-equiv="cache-control" content="no-cache">-->
+  <meta http-equiv="refresh" content="120">
   <script type="text/javascript" src="jscolor/jscolor.js"></script>
   <script>
     function sourceChange(valu) {
