@@ -343,7 +343,7 @@ CREATE TABLE `zapqueue` (
 
 -- Dump completed on 2015-03-05 15:53:29
 INSERT INTO `hashcatreleases` (`version`, `time`, `url_nvidia`, `url_amd`, `common_files`, `32_nvidia`, `64_nvidia`, `32_amd`, `64_amd`, `rootdir_nvidia`, `rootdir_amd`, `minver_nvidia`, `minver_amd`) VALUES
-('1.33', NOW(), 'http://hashcat.net/files/oclHashcat-1.35.7z', 'http://hashcat.net/files/oclHashcat-1.35.7z', 'hashcat.hcstat hashcat.keyfile', 'kernels/4318/*32.ptx', 'kernels/4318/*64.ptx', 'kernels/4098/*.llvmir', 'kernels/4098/*.llvmir', 'cudaHashcat-1.35', 'oclHashcat-1.35', 34600, 1409);
+('1.35', NOW(), 'http://hashcat.net/files/oclHashcat-1.35.7z', 'http://hashcat.net/files/oclHashcat-1.35.7z', 'hashcat.hcstat hashcat.keyfile', 'kernels/4318/*32.ptx', 'kernels/4318/*64.ptx', 'kernels/4098/*.llvmir', 'kernels/4098/*.llvmir', 'cudaHashcat-1.35', 'oclHashcat-1.35', 34600, 1409);
 
 INSERT INTO `config` (`item`,`value`) VALUES
 ('agenttimeout','30'),
