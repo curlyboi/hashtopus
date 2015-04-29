@@ -341,7 +341,7 @@ CREATE TABLE `zapqueue` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-04-01 16:08:40
+-- Dump completed on 2015-04-29 13:49:50
 
 
 INSERT INTO `config` (`item`,`value`) VALUES
@@ -403,13 +403,13 @@ INSERT INTO `hashtypes` (`id`, `description`) VALUES
 (3100, 'Oracle 7-10g, DES(Oracle)'),
 (3200, 'bcrypt, Blowfish(OpenBSD)'),
 (3710, 'md5($salt.md5($pass))'),
-(3810, 'md5($pass.$salt.$pass)'),
+(3800, 'md5($pass.$salt.$pass)'),
 (4300, 'md5(strtoupper(md5($pass)))'),
 (4400, 'md5(sha1($pass))'),
 (4500, 'Double SHA1'),
 (4700, 'sha1(md5($pass))'),
-(4710, 'sha1($salt.$pass.$salt)'),
 (4800, 'MD5(Chap), iSCSI CHAP authentication'),
+(4900, 'sha1($salt.$pass.$salt)'),
 (5000, 'SHA-3(Keccak)'),
 (5100, 'Half MD5'),
 (5200, 'Password Safe v3'),
@@ -475,6 +475,10 @@ INSERT INTO `hashtypes` (`id`, `description`) VALUES
 (11000, 'PrestaShop'),
 (11100, 'PostgreSQL Challenge-Response Authentication (MD5)'),
 (11200, 'MySQL Challenge-Response Authentication (SHA1)'),
+(11300, 'Bitcoin/Litecoin wallet.dat'),
+(11400, 'SIP digest authentication (MD5)'),
+(11500, 'CRC32'),
+(11600, '7-Zip'),
 (11, 'Joomla < 2.5.18'),
 (12, 'PostgreSQL'),
 (21, 'osCommerce, xt:Commerce'),
@@ -504,4 +508,4 @@ INSERT INTO `hashtypes` (`id`, `description`) VALUES
 
 
 INSERT INTO `hashcatreleases` (`version`, `time`, `url_nvidia`, `url_amd`, `common_files`, `32_nvidia`, `64_nvidia`, `32_amd`, `64_amd`, `rootdir_nvidia`, `rootdir_amd`, `minver_nvidia`, `minver_amd`) VALUES
-('1.35', NOW(), 'http://hashcat.net/files/cudaHashcat-1.35.7z', 'http://hashcat.net/files/oclHashcat-1.35.7z', 'hashcat.hcstat hashcat.keyfile', 'kernels/4318/*32.ptx', 'kernels/4318/*64.ptx', 'kernels/4098/*.llvmir', 'kernels/4098/*.llvmir', 'cudaHashcat-1.35', 'oclHashcat-1.35', 34600, 1409);
+('1.36', NOW(), 'http://hashcat.net/files/cudaHashcat-1.36.7z', 'http://hashcat.net/files/oclHashcat-1.36.7z', 'hashcat.hcstat hashcat.keyfile', 'kernels/4318/*32.ptx', 'kernels/4318/*64.ptx', 'kernels/4098/*.llvmir', 'kernels/4098/*.llvmir', 'cudaHashcat-1.36', 'oclHashcat-1.36', 34600, 1409);
