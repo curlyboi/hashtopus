@@ -2,6 +2,8 @@
 
 function mysqli_query_wrapper($dblink, $query) {
   // function to wrap mysql queries and log them if they take too long or end up in error
+  // $logging sets how does the query need to take so it's logged (default = 1 /one second/)
+  // to log all, simply set it to 0 (i know, somewhat illogical)
   $logging=1;
   if ($logging>-1) {
     $log=date("d.m.Y H:i:s")."\r\n".$query;
@@ -689,6 +691,13 @@ switch ($action) {
                   // save cracked wpa password
                   $network=mysqli_real_escape_string($dblink,$elementy[0]);
                   $plain=mysqli_real_escape_string($dblink,$elementy[1]);
+                  
+                  // QUICK-FIX WPA/WPA2 strip mac address
+                  if (preg_match("/.+:[0-9a-f]{12}:[0-9a-f]{12}$/", $dat)===1) {
+                    // TODO: extend DB model by MACs and implement detection
+                    $network=substr($network,0,strlen($network)-26);
+                  }
+                  
                   $podminka="$tbl.essid='$network'";
                   break;
                   
