@@ -1,5 +1,5 @@
 <?php
-$htpver="0.9.5";
+$htpver="0.9.6";
 $htphost=$_SERVER['HTTP_HOST'];
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);
@@ -1931,14 +1931,15 @@ echo '</ul>
           }
         }
 
-        $kver=mysqli_query_wrapper($dblink,"SELECT tasks.id,tasks.name,tasks.progress,chunks.sumprog,tasks.keyspace,IFNULL(chunks.cracked,0) AS cracked,IF(chunks.lastact>".($cas-$config["chunktimeout"]).",1,0) AS active FROM tasks LEFT JOIN (SELECT task,SUM(cracked) AS cracked,SUM(progress) AS sumprog,GREATEST(MAX(dispatchtime),MAX(solvetime)) AS lastact FROM chunks GROUP BY task) chunks ON chunks.task=tasks.id WHERE tasks.hashlist=$hlist ORDER by tasks.priority DESC,tasks.id ASC");
+        // assigned tasks
+        $kver=mysqli_query_wrapper($dblink,"SELECT tasks.id,tasks.name,tasks.attackcmd,tasks.progress,chunks.sumprog,tasks.keyspace,IFNULL(chunks.cracked,0) AS cracked,IF(chunks.lastact>".($cas-$config["chunktimeout"]).",1,0) AS active FROM tasks LEFT JOIN (SELECT task,SUM(cracked) AS cracked,SUM(progress) AS sumprog,GREATEST(MAX(dispatchtime),MAX(solvetime)) AS lastact FROM chunks GROUP BY task) chunks ON chunks.task=tasks.id WHERE tasks.hashlist=$hlist ORDER by tasks.priority DESC,tasks.id ASC");
         if (mysqli_num_rows($kver)>0) {
           echo "<br>Tasks cracking this hashlist:";
           echo "<table class=\"styled\">";
           echo "<tr><td>id</td><td>Name</td><td>Dispatched</td><td>Searched</td><td>Cracked</td></tr>";
           while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
             $id=$erej["id"];
-            echo "<tr><td><a href=\"$myself?a=taskdetail&task=$id\">$id</a></td><td><a href=\"$myself?a=taskdetail&task=$id\">";
+            echo "<tr><td><a href=\"$myself?a=taskdetail&task=$id\">$id</a></td><td><a href=\"$myself?a=taskdetail&task=$id\" title=\"".$erej["attackcmd"]."\">";
             echo $erej["name"];
             echo "</a>";
             echo tickdone($erej["progress"],$erej["keyspace"]);
@@ -1955,7 +1956,7 @@ echo '</ul>
         }
 
         // preconf tasks
-        $kver=mysqli_query_wrapper($dblink,"SELECT id,name,color FROM tasks WHERE hashlist IS NULL ORDER BY priority DESC, id ASC");
+        $kver=mysqli_query_wrapper($dblink,"SELECT id,name,attackcmd,color FROM tasks WHERE hashlist IS NULL ORDER BY priority DESC, id ASC");
         if (mysqli_num_rows($kver)>0) {
           echo "</td><td>";
           echo "Create pre-configured tasks:";
@@ -1969,7 +1970,7 @@ echo '</ul>
             if (strlen($erej["color"])>0) {
               echo " style=\"background-color: #".$erej["color"]."\"";
             }
-            echo "><a href=\"$myself?a=taskdetail&task=$fid\">$fid</a></td><td><input type=\"checkbox\" name=\"task[]\" value=\"$fid\"><a href=\"$myself?a=taskdetail&task=$fid\">".$erej["name"]."</a></td></tr>";
+            echo "><a href=\"$myself?a=taskdetail&task=$fid\">$fid</a></td><td><input type=\"checkbox\" name=\"task[]\" value=\"$fid\"><a href=\"$myself?a=taskdetail&task=$fid\" title=\"".$erej["attackcmd"]."\">".$erej["name"]."</a></td></tr>";
           }
           echo "<tr><td colspan=\"2\"><input type=\"submit\" value=\"Create\"> <input type=\"checkbox\" onChange=\"javascript:checkAll('preconf',this.checked);\">Select All</td></tr>";
           echo "</table>";
