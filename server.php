@@ -693,7 +693,7 @@ switch ($action) {
                   $plain=mysqli_real_escape_string($dblink,$elementy[1]);
                   
                   // QUICK-FIX WPA/WPA2 strip mac address
-                  if (preg_match("/.+:[0-9a-f]{12}:[0-9a-f]{12}$/", $dat)===1) {
+                  if (preg_match("/.+:[0-9a-f]{12}:[0-9a-f]{12}$/", $network)===1) {
                     // TODO: extend DB model by MACs and implement detection
                     $network=substr($network,0,strlen($network)-26);
                   }
@@ -793,6 +793,7 @@ switch ($action) {
               default:
                 // the chunk isn't finished yet, we will send zaps
                 $verif=mysqli_query_wrapper($dblink,"SELECT 1 FROM hashlists WHERE id IN ($hlistyzap) AND cracked<hashcount");
+                echo $separator;
                 if (mysqli_num_rows($verif)>0) {
                   // there are some hashes left uncracked in this (super)hashlist
                   if ($task==$otask) {
@@ -800,7 +801,6 @@ switch ($action) {
                     mysqli_query_wrapper($dblink,"UPDATE assignments SET speed=$speed WHERE agent=$agid AND task=$task");
                   }
                   
-                  echo $separator;
                   mysqli_query_wrapper($dblink,"START TRANSACTION");
                   switch ($format) {
                     case 0:
