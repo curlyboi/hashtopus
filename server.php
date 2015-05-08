@@ -246,6 +246,7 @@ switch ($action) {
       }
     } else {
       // there was nothing
+      mysqli_query_wrapper($dblink,"UPDATE assignments JOIN agents ON assignments.agent=agents.id AND agents.token='$token' SET assignments.speed=0");
       echo "task_nok".$separator."No active tasks.";
     }
     break;
