@@ -1,5 +1,5 @@
 <?php
-$htpver="0.9.6";
+$htpver="0.9.7";
 $htphost=$_SERVER['HTTP_HOST'];
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);

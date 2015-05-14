@@ -343,9 +343,13 @@ switch ($action) {
     break;
 
   case "chunk":
-    $disptolerance=1.1;
-    
     // assign a correctly sized chunk to agent
+    
+    // default: 1.2 (120%) this says that if desired chunk size is X and remaining keyspace is 1.2 * X then
+    // it will be assigned as a whole instead of first assigning X and then 0.2 * X (which would be very small
+    // and therefore very slow due to lack of GPU utilization)
+    $disptolerance=1.2;
+    
     $task=intval($_GET["task"]);
     $kver=mysqli_query_wrapper($dblink,"SELECT assignments.benchmark,agents.id,tasks.chunktime,tasks.progress,IFNULL(chunks.sumdispatch,0) AS sumdispatch,tasks.keyspace FROM agents JOIN assignments ON assignments.agent=agents.id JOIN tasks ON tasks.id=assignments.task LEFT JOIN (SELECT chunks.task,SUM(chunks.length) AS sumdispatch FROM chunks JOIN tasks ON chunks.task=tasks.id WHERE chunks.progress=chunks.length OR GREATEST(chunks.solvetime,chunks.dispatchtime)>=".($cas-$config["chunktimeout"])." GROUP BY chunks.task) chunks ON chunks.task=tasks.id WHERE agents.active=1 AND agents.token='$token' AND tasks.id=$task");
     if (mysqli_num_rows($kver)==1) {
@@ -519,7 +523,7 @@ switch ($action) {
           // benchmark ended in some problematic way
           $bprog=0;
         }
-        if ($bprog>0 && mysqli_query_wrapper($dblink,"UPDATE assignments SET benchmark=$bprog WHERE agent=$agid AND task=$task")) {
+        if ($bprog>0 && mysqli_query_wrapper($dblink,"UPDATE assignments SET speed=0, benchmark=$bprog WHERE agent=$agid AND task=$task")) {
           echo "bench_ok".$separator.$bprog;
         } else {
           echo "bench_nok".$separator."Could not update your benchmark for this task.";
@@ -773,7 +777,7 @@ switch ($action) {
                   $delka=$cas-$dispatchtime;
                   $newbench=($bench/$delka)*$chunktime;
                   // update the benchmark
-                  mysqli_query_wrapper($dblink,"UPDATE assignments SET benchmark=$newbench WHERE task=$task AND agent=$agid");
+                  mysqli_query_wrapper($dblink,"UPDATE assignments SET speed=0, benchmark=$newbench WHERE task=$task AND agent=$agid");
                 }
                 break;
               
@@ -789,6 +793,7 @@ switch ($action) {
                 
               case 6:
                 // the chunk was aborted
+                mysqli_query_wrapper($dblink,"UPDATE assignments SET speed=0 WHERE task=$task AND agent=$agid");
                 break;
                 
               default:
