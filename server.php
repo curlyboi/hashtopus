@@ -38,8 +38,10 @@ switch ($action) {
     // register at master server - user will be given a token
     $voucher=mysqli_real_escape_string($dblink,$_POST["voucher"]);
     mysqli_query_wrapper($dblink,"START TRANSACTION");
-    $tc=mysqli_query_wrapper($dblink,"SELECT 1 FROM regvouchers WHERE voucher='$voucher'");
-    if (mysqli_num_rows($tc)==1) {
+    $kvery=mysqli_query_wrapper($dblink,"SELECT comment FROM regvouchers WHERE voucher='$voucher'");
+    if (mysqli_num_rows($kvery)==1) {
+      $erej=mysqli_fetch_array($kvery,MYSQLI_ASSOC);
+      $comment=$erej["comment"];
       mysqli_query_wrapper($dblink,"DELETE FROM regvouchers WHERE voucher='$voucher'");
       $cpu=intval($_POST["cpu"]);
       $gpu=mysqli_real_escape_string($dblink,$_POST["gpus"]);
@@ -62,7 +64,7 @@ switch ($action) {
       $token=generate_random(10);
       
       // save the new agent to the db or update existing one with the same hdd-serial
-      if (mysqli_query_wrapper($dblink,"INSERT INTO agents (name, uid, os, cputype, gpubrand, gpus, token) VALUES ('$name', '$uid', $os, $cpu, $brand,'$gpu','$token') ON DUPLICATE KEY UPDATE name='$name',os=$os,cputype=$cpu,gpubrand=$brand,gpus='$gpu',token='$token'")) {
+      if (mysqli_query_wrapper($dblink,"INSERT INTO agents (name, uid, os, cputype, gpubrand, gpus, token, comment) VALUES ('$name', '$uid', $os, $cpu, $brand,'$gpu','$token', '$comment') ON DUPLICATE KEY UPDATE name='$name',os=$os,cputype=$cpu,gpubrand=$brand,gpus='$gpu',token='$token',comment='$comment'")) {
         echo "reg_ok".$separator.$token;
       } else {
         echo "reg_nok".$separator."Could not register you to server.";
