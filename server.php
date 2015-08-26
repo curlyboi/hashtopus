@@ -37,11 +37,12 @@ switch ($action) {
   case "reg":
     // register at master server - user will be given a token
     $voucher=mysqli_real_escape_string($dblink,$_POST["voucher"]);
+    $failure = false;
     mysqli_query_wrapper($dblink,"START TRANSACTION");
     $kvery=mysqli_query_wrapper($dblink,"SELECT comment FROM regvouchers WHERE voucher='$voucher'");
     if (mysqli_num_rows($kvery)==1) {
       $erej=mysqli_fetch_array($kvery,MYSQLI_ASSOC);
-      $comment=$erej["comment"];
+      $comment=mysqli_real_escape_string($dblink,$erej["comment"]);
       mysqli_query_wrapper($dblink,"DELETE FROM regvouchers WHERE voucher='$voucher'");
       $cpu=intval($_POST["cpu"]);
       $gpu=mysqli_real_escape_string($dblink,$_POST["gpus"]);
@@ -68,11 +69,17 @@ switch ($action) {
         echo "reg_ok".$separator.$token;
       } else {
         echo "reg_nok".$separator."Could not register you to server.";
+        $failure = true;
       }
     } else {
       echo "reg_nok".$separator."Provided voucher does not exist.";
+      $failure = true;
     }
-    mysqli_query_wrapper($dblink,"COMMIT");
+    if ($failure) {
+      mysqli_query_wrapper($dblink,"ROLLBACK");
+    } else {
+      mysqli_query_wrapper($dblink,"COMMIT");
+    }
     break;
 
   case "log":
