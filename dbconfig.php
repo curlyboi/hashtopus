@@ -6,6 +6,7 @@ $dbname="dbname";
 $dblink = @mysqli_connect($dbhost,$dbuser,$dbpass,$dbname) or die("Error " . mysqli_connect_error($dblink));
 $separator="\x01";
 $sess_name="auth";
+$exename="hashtopus.exe";
 
 $kv=mysqli_query($dblink,"SELECT * FROM config");
 $config=array();

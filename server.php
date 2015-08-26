@@ -25,7 +25,6 @@ function mysqli_query_wrapper($dblink, $query) {
 
 set_time_limit(0);
 include("dbconfig.php");
-$exename="hashtopus.exe";
 
 $action=mysqli_real_escape_string($dblink,@$_GET["a"]);
 $token=mysqli_real_escape_string($dblink,@$_GET["token"]);
@@ -106,6 +105,14 @@ switch ($action) {
   case "update":
     // check if provided hash is the same as executable and send file contents if not
     $hash=$_GET["hash"];
+    if (!file_exists($exename)) {
+      if (! $hash) {
+        // initial deployment
+        header("Content-Type: text/plain");
+        echo "No agent software found on server! Try again later";
+      }
+      break;
+    }
     $htexe=file_get_contents($exename)."http".(isset($_SERVER['HTTPS']) ? "s" : "")."://".$_SERVER['HTTP_HOST'].$_SERVER['SCRIPT_NAME'];
     $myhash=md5($htexe);
     if ($hash!=$myhash) {
