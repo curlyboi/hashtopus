@@ -38,6 +38,7 @@ CREATE TABLE `agents` (
   `active` bit(1) NOT NULL DEFAULT b'1' COMMENT 'Flag if agent is active',
   `trusted` bit(1) NOT NULL DEFAULT b'1' COMMENT 'Is agent trusted for secret data?',
   `token` varchar(10) COLLATE latin1_bin NOT NULL COMMENT 'Generated access token',
+  `comment` varchar(250) COLLATE latin1_bin NOT NULL DEFAULT '' COMMENT 'Optional comment',
   `lastact` varchar(10) COLLATE latin1_bin NOT NULL DEFAULT '' COMMENT 'Last action',
   `lasttime` bigint(20) NOT NULL DEFAULT '0' COMMENT 'Last action time',
   `lastip` varchar(15) COLLATE latin1_bin NOT NULL DEFAULT '' COMMENT 'Last action IP',
@@ -258,6 +259,7 @@ DROP TABLE IF EXISTS `regvouchers`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `regvouchers` (
   `voucher` varchar(10) COLLATE latin1_bin NOT NULL COMMENT 'Registration vouchers',
+  `comment` varchar(250) COLLATE latin1_bin NOT NULL COMMENT 'Optional comment',
   `time` bigint(20) NOT NULL COMMENT 'Timestamp of creation',
   PRIMARY KEY (`voucher`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_bin COMMENT='Tokens allowing agent registration';

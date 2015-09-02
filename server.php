@@ -25,7 +25,6 @@ function mysqli_query_wrapper($dblink, $query) {
 
 set_time_limit(0);
 include("dbconfig.php");
-$exename="hashtopus.exe";
 
 $action=mysqli_real_escape_string($dblink,@$_GET["a"]);
 $token=mysqli_real_escape_string($dblink,@$_GET["token"]);
@@ -37,9 +36,12 @@ switch ($action) {
   case "reg":
     // register at master server - user will be given a token
     $voucher=mysqli_real_escape_string($dblink,$_POST["voucher"]);
+    $failure = false;
     mysqli_query_wrapper($dblink,"START TRANSACTION");
-    $tc=mysqli_query_wrapper($dblink,"SELECT 1 FROM regvouchers WHERE voucher='$voucher'");
-    if (mysqli_num_rows($tc)==1) {
+    $kvery=mysqli_query_wrapper($dblink,"SELECT comment FROM regvouchers WHERE voucher='$voucher'");
+    if (mysqli_num_rows($kvery)==1) {
+      $erej=mysqli_fetch_array($kvery,MYSQLI_ASSOC);
+      $comment=mysqli_real_escape_string($dblink,$erej["comment"]);
       mysqli_query_wrapper($dblink,"DELETE FROM regvouchers WHERE voucher='$voucher'");
       $cpu=intval($_POST["cpu"]);
       $gpu=mysqli_real_escape_string($dblink,$_POST["gpus"]);
@@ -62,15 +64,21 @@ switch ($action) {
       $token=generate_random(10);
       
       // save the new agent to the db or update existing one with the same hdd-serial
-      if (mysqli_query_wrapper($dblink,"INSERT INTO agents (name, uid, os, cputype, gpubrand, gpus, token) VALUES ('$name', '$uid', $os, $cpu, $brand,'$gpu','$token') ON DUPLICATE KEY UPDATE name='$name',os=$os,cputype=$cpu,gpubrand=$brand,gpus='$gpu',token='$token'")) {
+      if (mysqli_query_wrapper($dblink,"INSERT INTO agents (name, uid, os, cputype, gpubrand, gpus, token, comment) VALUES ('$name', '$uid', $os, $cpu, $brand,'$gpu','$token', '$comment') ON DUPLICATE KEY UPDATE name='$name',os=$os,cputype=$cpu,gpubrand=$brand,gpus='$gpu',token='$token',comment='$comment'")) {
         echo "reg_ok".$separator.$token;
       } else {
         echo "reg_nok".$separator."Could not register you to server.";
+        $failure = true;
       }
     } else {
       echo "reg_nok".$separator."Provided voucher does not exist.";
+      $failure = true;
     }
-    mysqli_query_wrapper($dblink,"COMMIT");
+    if ($failure) {
+      mysqli_query_wrapper($dblink,"ROLLBACK");
+    } else {
+      mysqli_query_wrapper($dblink,"COMMIT");
+    }
     break;
 
   case "log":
@@ -97,6 +105,14 @@ switch ($action) {
   case "update":
     // check if provided hash is the same as executable and send file contents if not
     $hash=$_GET["hash"];
+    if (!file_exists($exename)) {
+      if (! $hash) {
+        // initial deployment
+        header("Content-Type: text/plain");
+        echo "No agent software found on server! Try again later";
+      }
+      break;
+    }
     $htexe=file_get_contents($exename)."http".(isset($_SERVER['HTTPS']) ? "s" : "")."://".$_SERVER['HTTP_HOST'].$_SERVER['SCRIPT_NAME'];
     $myhash=md5($htexe);
     if ($hash!=$myhash) {

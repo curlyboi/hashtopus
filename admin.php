@@ -491,6 +491,16 @@ echo '</ul>
       }
       break;
       
+    case "agentcomment";
+      // change agent comment
+      $agid=intval($_POST["agent"]);
+      $pars=mysqli_real_escape_string($dblink,$_POST["comment"]);
+      $vysledek=mysqli_query_wrapper($dblink,"UPDATE agents SET comment='$pars' WHERE id=$agid");
+      if (!$vysledek) {
+        echo "<script>alert('Could not change agent-specific parameters!');</script>";
+      }
+      break;
+      
     case "chunkreset";
       // reset chunk state and progress to zero
       $chunk=intval($_POST["chunk"]);
@@ -2229,6 +2239,15 @@ echo '</ul>
       echo "</form>";
       echo "</td></tr>";
       echo "<tr><td>Machine name:</td><td>".$erej["name"]."</td></tr>";
+
+      echo "<tr><td>Comment:</td><td>";
+      echo "<form action=\"$myself?a=agentcomment\" method=\"POST\">";
+      echo "<input type=\"hidden\" name=\"agent\" value=\"$agid\">";
+      echo "<input type=\"hidden\" name=\"return\" value=\"a=agentdetail&agent=$agid\">";
+      echo "<input type=\"text\" name=\"comment\" value=\"".$erej["comment"]."\" size=\"30\"> ";
+      echo "<input type=\"submit\" value=\"Set\"></form>";
+      echo "</td></tr>";
+
       echo "<tr><td>Operating system:</td><td>".$oses[$erej["os"]]."</td></tr>";
       echo "<tr><td>Access token:</td><td>".$erej["token"]."</td></tr>";
       echo "<tr><td>Machine ID:</td><td>".$erej["uid"]."</td></tr>";
@@ -2727,19 +2746,26 @@ echo '</ul>
       
     case "deploy":
       // manage registration vouchers
-      echo "Provide agent with valid voucher and this link:<br>";
-      echo "<a href=\"server.php?a=update\">Download agent</a><br><br>";
-      if (isset($_POST["newvoucher"])) {
-        mysqli_query_wrapper($dblink,"INSERT INTO regvouchers (voucher,time) VALUES ('".mysqli_real_escape_string($dblink,$_POST["newvoucher"])."',$cas)");
+      if (file_exists($exename)) {
+        echo "Provide agent with valid voucher and this link:<br>";
+        echo "<a href=\"server.php?a=update\">Download agent</a><br><br>";
+      } else {
+        echo "<p style='color:red'>There is no client executable file <b>$exename</b> in server root!<br>";
+        echo "Please upload $exename in order to deploy it to agents</p>";
       }
-      $kver=mysqli_query_wrapper($dblink,"SELECT voucher,time FROM regvouchers");
+      if (isset($_POST["newvoucher"])) {
+        mysqli_query_wrapper($dblink,"INSERT INTO regvouchers (voucher,comment,time) VALUES ('".mysqli_real_escape_string($dblink,$_POST["newvoucher"])."','".mysqli_real_escape_string($dblink,$_POST["comment"])."',$cas)");
+      }
+      $kver=mysqli_query_wrapper($dblink,"SELECT voucher,comment,time FROM regvouchers");
       if (mysqli_num_rows($kver)>0) {
         echo "Existing vouchers:<br>";
-        echo "<table class=\"styled\"><tr><td>Voucher</td><td>Issued</td><td>Action</td></tr>";
+        echo "<table class=\"styled\"><tr><td>Voucher</td><td>Issued</td><td>Comment</td><td>Action</td></tr>";
         while ($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
           $id=$erej["voucher"];
+          $comment=$erej["comment"];
           echo "<tr><td>$id</td>";
           echo "<td>".date($config["timefmt"],$erej["time"])."</td>";
+          echo "<td>$comment</td>";
           echo "<td><form action=\"$myself?a=voucherdelete\" method=\"POST\" onSubmit=\"if (!confirm('Really delete this voucher?')) return false;\">";
           echo "<input type=\"hidden\" name=\"return\" value=\"a=deploy\">";
           echo "<input type=\"hidden\" name=\"voucher\" value=\"$id\">";
@@ -2748,9 +2774,10 @@ echo '</ul>
         echo "</table>Used vouchers are automaticaly deleted to prevent double spending.<br><br>";
       }
       echo "<form action=\"$myself?a=deploy\" method=\"POST\">";
-      echo "<table class=\"styled\"><tr><td>New voucher</td></tr>";
-      echo "<tr><td><input type=\"text\" name=\"newvoucher\" value=\"".generate_random(8)."\"></td></tr>";
-      echo "<tr><td><input type=\"submit\" value=\"Create\"></td></tr>";
+      echo "<table class=\"styled\"><tr><td colspan=2>New voucher</td></tr>";
+      echo "<tr><td>Voucher</td><td><input type=\"text\" name=\"newvoucher\" value=\"".generate_random(8)."\"></td></tr>";
+      echo "<tr><td>Comment (optional)</td><td><input type=\"text\" name=\"comment\" value=\"\"></td></tr>";
+      echo "<tr><td colspan=2><input type=\"submit\" value=\"Create\"></td></tr>";
       echo "</table></form>";
       break;
     
