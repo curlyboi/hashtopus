@@ -638,9 +638,9 @@ switch ($action) {
         $errors=0;
 
         // process solved hashes, should there be any
-        if (strlen($HTTP_RAW_POST_DATA)>0) {
+        if (strlen(file_get_contents("php://input"))>0) {
           // there is some uploaded text (cracked hashes)
-          $data=explode($newline,$HTTP_RAW_POST_DATA);
+          $data=explode($newline,file_get_contents("php://input"));
           if (count($data)>1) {
             // there is more then one line
             // (even for one hash, there is $newline at the end so that makes it two lines)
