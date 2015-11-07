@@ -62,7 +62,7 @@ switch ($action) {
       $token=generate_random(10);
       
       // save the new agent to the db or update existing one with the same hdd-serial
-      if (mysqli_query_wrapper($dblink,"INSERT INTO agents (name, uid, os, cputype, gpubrand, gpus, token) VALUES ('$name', '$uid', $os, $cpu, $brand,'$gpu','$token') ON DUPLICATE KEY UPDATE name='$name',os=$os,cputype=$cpu,gpubrand=$brand,gpus='$gpu',token='$token'")) {
+      if (mysqli_query_wrapper($dblink,"INSERT INTO agents (name, uid, os, cputype, gpubrand, gpus, token) VALUES ('$name', '$uid', $os, $cpu, $brand,'$gpu','$token')")) {
         echo "reg_ok".$separator.$token;
       } else {
         echo "reg_nok".$separator."Could not register you to server.";
@@ -871,7 +871,7 @@ switch ($action) {
         $newline="\r\n";
       }
       $agid=$erej["id"];
-      $data=explode($newline,$HTTP_RAW_POST_DATA);
+      $data=explode($newline,file_get_contents("php://input"));
       $i=0; $j=0;
       foreach ($data as $dato) {
         // for non empty lines add error to the db
@@ -885,7 +885,7 @@ switch ($action) {
         echo "err_ok".$separator.$i;
       } else {
         echo "err_nok".$separator."Uploaded $i/$j errors.";
-        file_put_contents("err_".$agid."_".$cas.".txt",$HTTP_RAW_POST_DATA);
+        file_put_contents("err_".$agid."_".$cas.".txt",file_get_contents("php://input"));
       }
     } else {
       echo "err_nok".$separator."Task does not exist or you are not assigned to it.";

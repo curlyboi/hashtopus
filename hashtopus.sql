@@ -42,7 +42,6 @@ CREATE TABLE `agents` (
   `lasttime` bigint(20) NOT NULL DEFAULT '0' COMMENT 'Last action time',
   `lastip` varchar(15) COLLATE latin1_bin NOT NULL DEFAULT '' COMMENT 'Last action IP',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uid` (`uid`),
   KEY `assignment_verify` (`token`,`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1 COLLATE=latin1_bin COMMENT='List of Hashtopus agents';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -341,7 +340,7 @@ CREATE TABLE `zapqueue` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-04-29 13:49:50
+-- Dump completed on 2015-11-07 11:47:27
 
 
 INSERT INTO `config` (`item`,`value`) VALUES
@@ -508,4 +507,4 @@ INSERT INTO `hashtypes` (`id`, `description`) VALUES
 
 
 INSERT INTO `hashcatreleases` (`version`, `time`, `url_nvidia`, `url_amd`, `common_files`, `32_nvidia`, `64_nvidia`, `32_amd`, `64_amd`, `rootdir_nvidia`, `rootdir_amd`, `minver_nvidia`, `minver_amd`) VALUES
-('1.36', NOW(), 'http://hashcat.net/files/cudaHashcat-1.36.7z', 'http://hashcat.net/files/oclHashcat-1.36.7z', 'hashcat.hcstat hashcat.keyfile', 'kernels/4318/*32.ptx', 'kernels/4318/*64.ptx', 'kernels/4098/*.llvmir', 'kernels/4098/*.llvmir', 'cudaHashcat-1.36', 'oclHashcat-1.36', 34600, 1409);
+('1.37', UNIX_TIMESTAMP(NOW()), 'http://hashcat.net/files/cudaHashcat-1.37.7z', 'http://hashcat.net/files/oclHashcat-1.37.7z', 'hashcat.hcstat hashcat.keyfile', 'kernels/4318/*32.ptx', 'kernels/4318/*64.ptx', 'kernels/4098/*.llvmir', 'kernels/4098/*.llvmir', 'cudaHashcat-1.37', 'oclHashcat-1.37', 34600, 1409);
