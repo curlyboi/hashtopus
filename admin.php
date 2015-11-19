@@ -1,5 +1,5 @@
 <?php
-$htpver="0.9.8";
+$htpver="0.9.9";
 $htphost=$_SERVER['HTTP_HOST'];
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);
@@ -2424,7 +2424,7 @@ echo '</ul>
       // show task details
       $task=intval($_GET["task"]);
       $filter=intval($_GET["all"]);
-      $kver=mysqli_query_wrapper($dblink,"SELECT tasks.*,hashlists.name AS hname,hashlists.format,ROUND(chunks.cprogress) AS cprogress,SUM(assignments.speed*IFNULL(achunks.working,0)) AS taskspeed,IF(chunks.lastact>".($cas-$config["chunktimeout"]).",1,0) AS active FROM tasks LEFT JOIN hashlists ON hashlists.id=tasks.hashlist LEFT JOIN (SELECT task,SUM(progress) AS cprogress,MAX(GREATEST(dispatchtime,solvetime)) AS lastact FROM chunks GROUP BY task) chunks ON chunks.task=tasks.id LEFT JOIN assignments ON assignments.task=tasks.id LEFT JOIN (SELECT DISTINCT agent,1 AS working FROM chunks WHERE task=$task AND GREATEST(dispatchtime,solvetime)>".($cas-$config["chunktimeout"]).") achunks ON achunks.agent=assignments.agent WHERE tasks.id=$task GROUP BY tasks.id");
+      $kver=mysqli_query_wrapper($dblink,"SELECT tasks.*,hashlists.name AS hname,hashlists.format,hashlists.hashtype AS htype,hashtypes.description AS htypename,ROUND(chunks.cprogress) AS cprogress,SUM(assignments.speed*IFNULL(achunks.working,0)) AS taskspeed,IF(chunks.lastact>".($cas-$config["chunktimeout"]).",1,0) AS active FROM tasks LEFT JOIN hashlists ON hashlists.id=tasks.hashlist LEFT JOIN hashtypes ON hashlists.hashtype=hashtypes.id LEFT JOIN (SELECT task,SUM(progress) AS cprogress,MAX(GREATEST(dispatchtime,solvetime)) AS lastact FROM chunks GROUP BY task) chunks ON chunks.task=tasks.id LEFT JOIN assignments ON assignments.task=tasks.id LEFT JOIN (SELECT DISTINCT agent,1 AS working FROM chunks WHERE task=$task AND GREATEST(dispatchtime,solvetime)>".($cas-$config["chunktimeout"]).") achunks ON achunks.agent=assignments.agent WHERE tasks.id=$task GROUP BY tasks.id");
        
       if (mysqli_num_rows($kver)!=1) break;
       $erej=mysqli_fetch_array($kver,MYSQLI_ASSOC);
@@ -2522,7 +2522,7 @@ echo '</ul>
         $ere=mysqli_fetch_array($kve,MYSQLI_ASSOC);
         echo "<tr><td>Estimated time:</td><td>".sectotime($ere["eta"])."</td></tr>";
         echo "<tr><td>Speed:</td><td>".nicenum($erej["taskspeed"],100000,1000)."H/s</td></tr>";
-        echo "<tr><td>".($erej["format"]==3 ? "Superh" : "H")."ashlist:</td><td><a href=\"$myself?a=hashlistdetail&hashlist=$hlist\">".$erej["hname"]."</a></td></tr>";
+        echo "<tr><td>".($erej["format"]==3 ? "Superh" : "H")."ashlist:</td><td><a href=\"$myself?a=hashlistdetail&hashlist=$hlist\">".$erej["hname"]."</a> (".($erej["htypename"]=="" ? $erej["htype"] : $erej["htypename"]).")</td></tr>";
       }
       echo "</table>";
 

@@ -340,14 +340,18 @@ CREATE TABLE `zapqueue` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-11-07 11:47:27
+-- Dump completed on 2015-11-19 12:44:15
 
 
 INSERT INTO `config` (`item`,`value`) VALUES
 ('agenttimeout','30'),
 ('benchtime','10'),
-('chunktime','900'),
+('chunktime','1200'),
 ('chunktimeout','30'),
+('emailaddr','changeme@domain.com'),
+('emailerror','0'),
+('emailhldone','0'),
+('emailtaskdone','0'),
 ('fieldseparator',':'),
 ('statustimer','5'),
 ('timefmt','d.m.Y, H:i:s');

@@ -182,9 +182,9 @@ switch ($action) {
     // tell agent information about its task
     
     // elaborate select where first line is agent's current assigned task (should there be any)
-    // and the second is the next task agent should be assigned next once his current is completed
+    // and the second is the following task the agent should be assigned to once his current is completed
     // (if agent is not assigned to any task, the next assigned is in the first line - this is
-    // identified by column named 'this', where 0=to be assigned, and >0=is assigned
+    // identified by column named 'this', where 0=to be assigned, and >0=is assigned)
     $kver=mysqli_query_wrapper($dblink,"SELECT tasks.id,tasks.autoadjust AS autotask,agents.wait,tasks.attackcmd,hashlists.hashtype,hashlists.format,agents.cmdpars,tasks.statustimer,tasks.hashlist,tasks.priority,IF(tasks.hashlist=atasks.hashlist AND atasks.hashlist IS NOT NULL AND tasks.hashlist IS NOT NULL,'continue','new') AS bench,IF(chunks.sumdispatch=tasks.keyspace AND tasks.progress=tasks.keyspace AND tasks.keyspace>0,0,1) AS taskinc,IF(hashlists.cracked<hashlists.hashcount,1,0) AS hlinc,IF(atasks.id=tasks.id,agents.id,0) AS this FROM tasks JOIN hashlists ON tasks.hashlist=hashlists.id LEFT JOIN (SELECT taskfiles.task,MAX(secret) AS secret FROM taskfiles JOIN files ON taskfiles.file=files.id GROUP BY taskfiles.task) taskfiles ON taskfiles.task=tasks.id JOIN agents ON agents.token='$token' AND agents.active=1 AND agents.trusted>=GREATEST(IFNULL(taskfiles.secret,0),hashlists.secret) LEFT JOIN assignments ON assignments.agent=agents.id LEFT JOIN tasks atasks ON assignments.task=atasks.id LEFT JOIN (SELECT chunks.task,SUM(chunks.length) AS sumdispatch FROM chunks JOIN tasks ON chunks.task=tasks.id WHERE chunks.progress=chunks.length OR GREATEST(chunks.solvetime,chunks.dispatchtime)>=".($cas-$config["chunktimeout"])." GROUP BY chunks.task) chunks ON chunks.task=tasks.id WHERE atasks.id=tasks.id OR ((tasks.progress<tasks.keyspace OR IFNULL(chunks.sumdispatch,0)<tasks.keyspace OR tasks.keyspace=0) AND tasks.priority>0 AND hashlists.cracked<hashlists.hashcount) ORDER BY this DESC, tasks.priority DESC LIMIT 2");
     $ere=mysqli_fetch_array($kver,MYSQLI_ASSOC);
     if ($ere!=false) {
@@ -638,9 +638,10 @@ switch ($action) {
         $errors=0;
 
         // process solved hashes, should there be any
-        if (strlen(file_get_contents("php://input"))>0) {
+        $rawdata=file_get_contents("php://input");
+        if (strlen($rawdata)>0) {
           // there is some uploaded text (cracked hashes)
-          $data=explode($newline,file_get_contents("php://input"));
+          $data=explode($newline,$rawdata);
           if (count($data)>1) {
             // there is more then one line
             // (even for one hash, there is $newline at the end so that makes it two lines)
@@ -659,7 +660,7 @@ switch ($action) {
               if ($superhash) mysqli_query_wrapper($dblink,"UPDATE hashlists SET cracked=cracked+(SELECT IFNULL(SUM(cracked),0) FROM tmphlcracks) WHERE id=$hlist");
               mysqli_query_wrapper($dblink,"UPDATE hashlists JOIN tmphlcracks ON hashlists.id=tmphlcracks.hashlist SET hashlists.cracked=hashlists.cracked+tmphlcracks.cracked");
               mysqli_query_wrapper($dblink,"INSERT IGNORE INTO zapqueue (hashlist,agent,time,chunk) SELECT hashlistusers.hashlist,hashlistusers.agent,$crack_cas,$cid FROM hashlistusers JOIN tmphlcracks ON hashlistusers.hashlist=tmphlcracks.hashlist AND tmphlcracks.zaps=1 WHERE hashlistusers.agent!=$agid");
-              // increase the timer so the chunks won't time out
+              // increase the timer so the chunks won't timeout during the result writing
               $crack_cas=time();
               mysqli_query_wrapper($dblink,"UPDATE chunks SET cracked=cracked+(SELECT IFNULL(SUM(cracked),0) FROM tmphlcracks),solvetime=$crack_cas WHERE id=$cid");
               mysqli_query_wrapper($dblink,"UPDATE tmphlcracks SET cracked=0,zaps=0");
@@ -767,6 +768,10 @@ switch ($action) {
             if ($taskdone) {
               // task is fully dispatched and this last chunk is done, deprioritize it
               mysqli_query_wrapper($dblink,"UPDATE tasks SET priority=0 WHERE id=$task");
+              
+              // email task done
+              if ($config["emailtaskdone"]=="1")
+                @mail($config["emailaddr"],"Hashtopus: task finished","Your task ID $task was finished by agent $agid.");
             }
 
             switch ($state) {
@@ -789,6 +794,10 @@ switch ($action) {
                   $hlistyzap.=$hlist;
                 }
                 mysqli_query_wrapper($dblink,"UPDATE tasks SET priority=0 WHERE hashlist IN ($hlistyzap)");
+
+                // email hashlist done
+                if ($config["emailhldone"]=="1")
+                  @mail($config["emailaddr"],"Hashtopus: hashlist cracked","Your hashlists ID $hlistyzap were cracked by agent $agid.");
                 break;
                 
               case 6:
@@ -871,7 +880,8 @@ switch ($action) {
         $newline="\r\n";
       }
       $agid=$erej["id"];
-      $data=explode($newline,file_get_contents("php://input"));
+      $rawdata=file_get_contents("php://input");
+      $data=explode($newline,$rawdata);
       $i=0; $j=0;
       foreach ($data as $dato) {
         // for non empty lines add error to the db
@@ -885,13 +895,17 @@ switch ($action) {
         echo "err_ok".$separator.$i;
       } else {
         echo "err_nok".$separator."Uploaded $i/$j errors.";
-        file_put_contents("err_".$agid."_".$cas.".txt",file_get_contents("php://input"));
+        file_put_contents("err_".$agid."_".$cas.".txt",$rawdata);
       }
     } else {
       echo "err_nok".$separator."Task does not exist or you are not assigned to it.";
     }
     // pause any agent activity because of error
     mysqli_query_wrapper($dblink,"UPDATE agents SET active=0 WHERE id=$agid AND ignoreerrors=0");
+
+    // email agent error
+    if ($config["emailerror"]=="1")
+      @mail($config["emailaddr"],"Hashtopus: agent error","Your agent $agid just encountered a hashcat error and was paused.");
     break;
 }
 
