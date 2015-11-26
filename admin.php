@@ -2727,8 +2727,13 @@ echo '</ul>
       
     case "deploy":
       // manage registration vouchers
-      echo "Provide agent with valid voucher and this link:<br>";
-      echo "<a href=\"server.php?a=update\">Download agent</a><br><br>";
+      if (file_exists($exename)) {
+        echo "Provide agent with valid voucher and this link:<br>";
+        echo "<a href=\"server.php?a=update\">Download agent</a><br><br>";
+      } else {
+        echo "<p style='color:red'>There is no client executable file <b>$exename</b> in server root!<br>";
+        echo "Please upload $exename in order to deploy it to agents</p>";
+      }
       if (isset($_POST["newvoucher"])) {
         mysqli_query_wrapper($dblink,"INSERT INTO regvouchers (voucher,time) VALUES ('".mysqli_real_escape_string($dblink,$_POST["newvoucher"])."',$cas)");
       }
