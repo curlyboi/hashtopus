@@ -1,5 +1,5 @@
 <?php
-$htpver="0.9.9";
+$htpver="0.10.0";
 $htphost=$_SERVER['HTTP_HOST'];
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);
@@ -96,7 +96,7 @@ if (isset($_POST["pwd"])) {
   if (!isset($config["password"]) || makepwd($_POST["pwd"])==$config["password"]) $_SESSION[$sess_name]=1;
 }
 
-if ($_SESSION[$sess_name]==1) {
+if (isset($_SESSION[$sess_name]) && $_SESSION[$sess_name]==1) {
   
   // define redirect place
   if (isset($_POST["return"])) {
@@ -150,7 +150,7 @@ echo '</ul>
   $formats=array("Text","HCCAP","Binary","Superhashlist");
   $formattables=array("hashes","hashes_binary","hashes_binary");
   $uperrs=array("","Uploaded file is too big for server settings, use different transfer method (i.e. FTP) and run directory scan in Task detail","Uploaded file is too big for form setting. Have you been playing with admin again?!","File upload was interrupted","No file was uploaded","","Server doesn't have a temporary folder","Failed writing to disk. Maybe no space left or >2GB file on FAT32","Some PHP module stopped the transfer");
-  switch ($_GET["a"]) {
+  switch (isset($_GET["a"]) ? $_GET["a"] : "") {
 
     case "agents":
       // list agents
@@ -2423,7 +2423,7 @@ echo '</ul>
     case "taskdetail":
       // show task details
       $task=intval($_GET["task"]);
-      $filter=intval($_GET["all"]);
+      $filter=intval(isset($_GET["all"]) ? $_GET["all"] : "");
       $kver=mysqli_query_wrapper($dblink,"SELECT tasks.*,hashlists.name AS hname,hashlists.format,hashlists.hashtype AS htype,hashtypes.description AS htypename,ROUND(chunks.cprogress) AS cprogress,SUM(assignments.speed*IFNULL(achunks.working,0)) AS taskspeed,IF(chunks.lastact>".($cas-$config["chunktimeout"]).",1,0) AS active FROM tasks LEFT JOIN hashlists ON hashlists.id=tasks.hashlist LEFT JOIN hashtypes ON hashlists.hashtype=hashtypes.id LEFT JOIN (SELECT task,SUM(progress) AS cprogress,MAX(GREATEST(dispatchtime,solvetime)) AS lastact FROM chunks GROUP BY task) chunks ON chunks.task=tasks.id LEFT JOIN assignments ON assignments.task=tasks.id LEFT JOIN (SELECT DISTINCT agent,1 AS working FROM chunks WHERE task=$task AND GREATEST(dispatchtime,solvetime)>".($cas-$config["chunktimeout"]).") achunks ON achunks.agent=assignments.agent WHERE tasks.id=$task GROUP BY tasks.id");
        
       if (mysqli_num_rows($kver)!=1) break;
