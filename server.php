@@ -96,7 +96,7 @@ switch ($action) {
   
   case "update":
     // check if provided hash is the same as executable and send file contents if not
-    $hash=$_GET["hash"];
+    $hash=(isset($_GET["hash"]) ? $_GET["hash"] : "");
     $htexe=file_get_contents($exename)."http".(isset($_SERVER['HTTPS']) ? "s" : "")."://".$_SERVER['HTTP_HOST'].$_SERVER['SCRIPT_NAME'];
     $myhash=md5($htexe);
     if ($hash!=$myhash) {
