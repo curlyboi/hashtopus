@@ -74,7 +74,7 @@ switch ($action) {
         echo "log_nok".$separator."Unknown platform.";
       } else {
         // craft executable name
-        echo "log_ok".$separator.$separator.$config["agenttimeout"];
+        echo "log_ok".$separator.$config["agenttimeout"];
       } 
     } else {
       // token was not found
