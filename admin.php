@@ -1,5 +1,5 @@
 <?php
-$htpver="0.10.0";
+$htpver="1.0";
 $htphost=$_SERVER['HTTP_HOST'];
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);
@@ -150,14 +150,15 @@ echo '</ul>
   $formats=array("Text","HCCAP","Binary","Superhashlist");
   $formattables=array("hashes","hashes_binary","hashes_binary");
   $uperrs=array("","Uploaded file is too big for server settings, use different transfer method (i.e. FTP) and run directory scan in Task detail","Uploaded file is too big for form setting. Have you been playing with admin again?!","File upload was interrupted","No file was uploaded","","Server doesn't have a temporary folder","Failed writing to disk. Maybe no space left or >2GB file on FAT32","Some PHP module stopped the transfer");
-  switch (isset($_GET["a"]) ? $_GET["a"] : "") {
+  $geta=(isset($_GET["a"]) ? $_GET["a"] : "");
+  switch ($geta) {
 
     case "agents":
       // list agents
-      $kver=mysqli_query_wrapper($dblink,"SELECT agents.id,agents.uid,agents.active,agents.trusted,agents.cputype,agents.gpubrand,agents.gpudriver,agents.gpus,agents.hcversion,agents.lastact,agents.lasttime,agents.lastip,assignments.task,assignments.speed,agents.os,agents.name,IF(IFNULL(chunks.time,0)>".($cas-$config["chunktimeout"]).",1,0) AS working FROM agents LEFT JOIN assignments ON agents.id=assignments.agent LEFT JOIN tasks ON assignments.task=tasks.id LEFT JOIN (SELECT agent,MAX(GREATEST(dispatchtime,solvetime)) AS time FROM chunks GROUP BY agent) chunks ON chunks.agent=agents.id ORDER BY agents.id ASC");
+      $kver=mysqli_query_wrapper($dblink,"SELECT agents.id,agents.uid,agents.active,agents.trusted,agents.cputype,agents.gpus,agents.hcversion,agents.lastact,agents.lasttime,agents.lastip,assignments.task,assignments.speed,agents.os,agents.name,IF(IFNULL(chunks.time,0)>".($cas-$config["chunktimeout"]).",1,0) AS working FROM agents LEFT JOIN assignments ON agents.id=assignments.agent LEFT JOIN tasks ON assignments.task=tasks.id LEFT JOIN (SELECT agent,MAX(GREATEST(dispatchtime,solvetime)) AS time FROM chunks GROUP BY agent) chunks ON chunks.agent=agents.id ORDER BY agents.id ASC");
       echo "List of agents (".mysqli_num_rows($kver)."):";
       echo "<table class=\"styled\">";
-      echo "<tr><td>id</td><td>Act</td><td>Name</td><td>OS</td><td>CPU</td><td>GPU brand</td><td>Driver</td><td>GPUs</td><td>Hashcat</td><td>Last activity</td><td>Assignment</td><td>Action</td></tr>";
+      echo "<tr><td>id</td><td>Act</td><td>Name</td><td>OS</td><td>CPU</td><td>GPUs</td><td>Hashcat</td><td>Last activity</td><td>Assignment</td><td>Action</td></tr>";
       while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
         $id=$erej["id"];
         echo "<tr><td><a href=\"$myself?a=agentdetail&agent=$id\">$id</a></td>";
@@ -177,8 +178,6 @@ echo '</ul>
         echo "</td><td>";
         echo $oses[$erej["os"]];
         echo "<td>".$erej["cputype"]."-bit</td><td>";
-        echo $platforms[$erej["gpubrand"]];
-        echo "</td><td>".$erej["gpudriver"]."</td><td>";
         $gpus=explode($separator,$erej["gpus"]);
         foreach ($gpus as $gpu) {
           shortenstring($gpu,32);
@@ -376,7 +375,7 @@ echo '</ul>
       if (mysqli_num_rows($kv)>0) {
         echo "<script>alert('There are registered agents running this Hashcat version.');</script>";
       } else {
-        $vysledek1=mysqli_query_wrapper($dblink,"DELETE FROM hashcatreleases WHERE version='$release'");
+        $vysledek1=mysqli_query_wrapper($dblink,"DELETE FROM hashcats WHERE version='$release'");
         if ($vysledek1) {
           mysqli_query_wrapper($dblink,"COMMIT");
         } else {
@@ -461,16 +460,6 @@ echo '</ul>
       }
       break;
 
-    case "agentpf";
-      // change agent platform (none/nvidia/amd)
-      $agid=intval($_POST["agent"]);
-      $pf=intval($_POST["platform"]);
-      $vysledek=mysqli_query_wrapper($dblink,"UPDATE agents SET gpubrand=$pf,gpudriver=0 WHERE id=$agid");
-      if (!$vysledek) {
-        echo "<script>alert('Could not change platform!');</script>";
-      }
-      break;
-      
     case "agentwait";
       // change agent waiting time for idle
       $agid=intval($_POST["agent"]);
@@ -930,19 +919,20 @@ echo '</ul>
       
     case "releases":
       // list hashcat releases
-      $kver=mysqli_query_wrapper($dblink,"SELECT * FROM hashcatreleases ORDER BY time DESC");
+      $kver=mysqli_query_wrapper($dblink,"SELECT * FROM hashcats ORDER BY time DESC");
       echo "List of Hashcat releases (".mysqli_num_rows($kver).")";
       echo "<table class=\"styled\">";
-      echo "<tr><td>Version</td><td>Added</td><td>URL</td><td>Common files</td><td>Specific files</td><td>Root directory</td><td>Req. driver</td><td>Action</td></tr>";
+      echo "<tr><td>Version</td><td>Added</td><td>URL</td><td>Common files</td><td>Root directory</td><td>Action</td></tr>";
       while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
         $ver=$erej["version"];
         echo "<tr><td>$ver</td><td>";
         if ($erej["time"]>0) {
           echo date($config["timefmt"],$erej["time"]);
         }
-        echo "</td><td>NVidia:<br><a href=\"".$erej["url_nvidia"]."\" target=\"_blank\" title=\"Test URL\">".basename($erej["url_nvidia"])."</a><br>AMD:<br><a href=\"".$erej["url_amd"]."\" target=\"_blank\" title=\"Test URL\">".basename($erej["url_amd"])."</a><td>".$erej["common_files"]."</td><td>NVidia 32: ".$erej["32_nvidia"]."<br>NVidia 64: ".$erej["64_nvidia"]."<br>AMD 32: ".$erej["32_amd"]."<br>AMD 64: ".$erej["64_amd"]."</td><td>NVidia:<br>".$erej["rootdir_nvidia"]."<br>AMD:<br>".$erej["rootdir_amd"]."</td><td>NVidia:<br>".$erej["minver_nvidia"]."<br>AMD:<br>".$erej["minver_amd"];
+        echo "</td><td><a href=\"".$erej["url"]."\" target=\"_blank\" title=\"Test URL\">".basename($erej["url"])."</a></td><td>".$erej["common_files"]."</td>";
+        echo "<td>".$erej["rootdir"]."</td>";
 
-        echo "</td><td><form action=\"$myself?a=releasedelete\" method=\"POST\" onSubmit=\"if (!confirm('Really delete Hashcat release $ver?')) return false;\">";
+        echo "<td><form action=\"$myself?a=releasedelete\" method=\"POST\" onSubmit=\"if (!confirm('Really delete Hashcat release $ver?')) return false;\">";
         echo "<input type=\"hidden\" name=\"return\" value=\"a=releases\">";
         echo "<input type=\"hidden\" name=\"release\" value=\"$ver\">";
         echo "<input type=\"submit\" value=\"Delete\"></form></td></tr>";
@@ -1817,20 +1807,27 @@ echo '</ul>
       echo "Create new Hashcat release:";
       echo "<form action=\"$myself?a=newreleasep\" method=\"POST\" enctype=\"multipart/form-data\">";
       echo "<table class=\"styled\">";
-      $kver=mysqli_query_wrapper($dblink,"SELECT * FROM hashcatreleases ORDER BY time DESC LIMIT 1");
-      $erej=mysqli_fetch_array($kver,MYSQLI_ASSOC);
+      
+      if (isset($_GET["auto"])) {
+        // get all details from hashcat website
+        $dom="http://hashcat.net";
+        $data=file_get_contents("$dom/hashcat/");
+        preg_match_all ("/\/files\/(hashcat-([0-9.]*)).*\.7z/", $data, $matche);
+        $erej=array("version" => $matche[2][0], "url" => $dom.$matche[0][0], "rootdir" => $matche[1][0], "common_files" => "OpenCL/* hashcat.hcstat hashcat.hctune");
+      } else {
+        // get details from previous release
+        $kver=mysqli_query_wrapper($dblink,"SELECT * FROM hashcats ORDER BY time DESC LIMIT 1");
+        $erej=mysqli_fetch_array($kver,MYSQLI_ASSOC);
+        $erej["version"]="";
+      }
 
-      echo "<tr><td>Property</td><td>NVidia</td><td>AMD</td></tr>";
-      echo "<tr><td>Version:</td><td colspan=\"2\"><input type=\"text\" name=\"version\"></td></tr>";
-      echo "<tr><td>Archive URL:</td><td><textarea name=\"url_nvidia\" cols=\"32\">{$erej["url_nvidia"]}</textarea></td><td><textarea name=\"url_amd\" cols=\"32\">{$erej["url_amd"]}</textarea></td></tr>";
-      echo "<tr><td>Archive root directory:</td><td><input type=\"text\" name=\"rootdir_nvidia\" size=\"32\" value=\"{$erej["rootdir_nvidia"]}\"></td><td><input type=\"text\" name=\"rootdir_amd\" size=\"32\" value=\"{$erej["rootdir_amd"]}\"></td></tr>";
-      echo "<tr><td colspan=\"3\">Files to extract (relative to root directory, omit executables and use forward slashes):</td></tr>";
-      echo "<tr><td>Common:</td><td colspan=\"2\"><textarea name=\"common_files\" cols=\"64\">{$erej["common_files"]}</textarea></td></tr>";
-      echo "<tr><td>32bit:</td><td><textarea name=\"32_nvidia\" cols=\"32\">{$erej["32_nvidia"]}</textarea></td><td><textarea name=\"32_amd\" cols=\"32\">{$erej["32_amd"]}</textarea></td></tr>";
-      echo "<tr><td>64bit:</td><td><textarea name=\"64_nvidia\" cols=\"32\">{$erej["64_nvidia"]}</textarea></td><td><textarea name=\"64_amd\" cols=\"32\">{$erej["64_amd"]}</textarea></td></tr>";
-      echo "<tr><td colspan=\"3\">Minimum driver versions</td></tr>";
-      echo "<tr><td>NVidia:</td><td><input type=\"text\" name=\"minver_nvidia\" value=\"{$erej["minver_nvidia"]}\"></td><td><input type=\"text\" name=\"minver_amd\" value=\"{$erej["minver_amd"]}\"></td></tr>";
-      echo "<tr><td colspan=\"3\"><input type=\"submit\" value=\"Create release\"></td></tr>";
+      echo "<tr><td>Property</td><td>Value (<a href=\"$myself?a=$geta&auto\">autoupdate</a>)</td></tr>";
+      echo "<tr><td>Version:</td><td><input type=\"text\" name=\"version\" value=\"{$erej["version"]}\"></td></tr>";
+      echo "<tr><td>Archive URL:</td><td><textarea name=\"url\" cols=\"32\">{$erej["url"]}</textarea></td></tr>";
+      echo "<tr><td>Archive root directory:</td><td><input type=\"text\" name=\"rootdir\" size=\"32\" value=\"{$erej["rootdir"]}\"></td></tr>";
+      echo "<tr><td colspan=\"2\">Files to extract (relative to root directory, omit executables and use forward slashes):</td></tr>";
+      echo "<tr><td>Common:</td><td><textarea name=\"common_files\" cols=\"64\">{$erej["common_files"]}</textarea></td></tr>";
+      echo "<tr><td colspan=\"2\"><input type=\"submit\" value=\"Create release\"></td></tr>";
       echo "</table>";
       echo "</form>";
       break;
@@ -1838,22 +1835,14 @@ echo '</ul>
     case "newreleasep":
       // new hashcat release creator
       $version=mysqli_real_escape_string($dblink,$_POST["version"]);
-      $url["1"]=mysqli_real_escape_string($dblink,$_POST["url_nvidia"]);
-      $url["2"]=mysqli_real_escape_string($dblink,$_POST["url_amd"]);
+      $url=mysqli_real_escape_string($dblink,$_POST["url"]);
       $common_files=mysqli_real_escape_string($dblink,$_POST["common_files"]);
-      $files["1"]["32"]=mysqli_real_escape_string($dblink,$_POST["32_nvidia"]);
-      $files["1"]["64"]=mysqli_real_escape_string($dblink,$_POST["64_nvidia"]);
-      $files["2"]["32"]=mysqli_real_escape_string($dblink,$_POST["32_amd"]);
-      $files["2"]["64"]=mysqli_real_escape_string($dblink,$_POST["64_amd"]);
-      $minver["1"]=floatval($_POST["minver_nvidia"]);
-      $minver["2"]=floatval($_POST["minver_amd"]);
-      $rootdir["1"]=mysqli_real_escape_string($dblink,$_POST["rootdir_nvidia"]);
-      $rootdir["2"]=mysqli_real_escape_string($dblink,$_POST["rootdir_amd"]);
+      $rootdir=mysqli_real_escape_string($dblink,$_POST["rootdir"]);
       if ($version=="") {
         echo "You must specify the version";
       } else {
         echo "Creating release in the DB...";
-        $vysledek=mysqli_query_wrapper($dblink,"INSERT INTO hashcatreleases (version,time,url_nvidia,url_amd,common_files,32_nvidia,64_nvidia,32_amd,64_amd,rootdir_nvidia,rootdir_amd,minver_nvidia,minver_amd) VALUES ('$version',$cas,'".$url["1"]."','".$url["2"]."','$common_files','".$files["1"]["32"]."','".$files["1"]["64"]."','".$files["2"]["32"]."','".$files["2"]["64"]."','".$rootdir["1"]."','".$rootdir["2"]."',".$minver["1"].",".$minver["2"].")");
+        $vysledek=mysqli_query_wrapper($dblink,"INSERT INTO hashcats (version,time,url,common_files,rootdir) VALUES ('$version',$cas,'$url','$common_files','$rootdir')");
         if ($vysledek) {
           // insert succeeded
           echo "OK";
@@ -2233,19 +2222,6 @@ echo '</ul>
       echo "<tr><td>Access token:</td><td>".$erej["token"]."</td></tr>";
       echo "<tr><td>Machine ID:</td><td>".$erej["uid"]."</td></tr>";
       echo "<tr><td>CPU platform:</td><td>".$erej["cputype"]."-bit</td></tr>";
-      echo "<tr><td>GPU platform:</td><td>";
-      echo "<form action=\"$myself?a=agentpf\" method=\"POST\">";
-      echo "<input type=\"hidden\" name=\"agent\" value=\"$agid\">";
-      echo "<input type=\"hidden\" name=\"return\" value=\"a=agentdetail&agent=$agid\">";
-      echo "<select name=\"platform\">";
-      foreach ($platforms as $idp=>$namep) {
-        echo "<option value=\"$idp\"";
-        if ($idp==$erej["gpubrand"]) echo " selected";
-        echo ">$namep</option>";
-      }
-      echo "</select> <input type=\"submit\" value=\"Set\"></form>";
-      echo "</td></tr>";
-      echo "<tr><td>GPU driver:</td><td>".$erej["gpudriver"]."</td></tr>";
       echo "<tr><td>Graphic cards:</td><td>".str_replace($separator,"<br>",$erej["gpus"])."</td></tr>";
       echo "<tr><td>Hashcat version:</td><td>".$erej["hcversion"]."</td></tr>";
 

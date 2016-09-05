@@ -47,22 +47,11 @@ switch ($action) {
       $name=mysqli_real_escape_string($dblink,$_POST["name"]);
       $os=intval($_POST["os"]);
       
-      $brand=0;
-      // detect brand strings
-      foreach (explode($separator,strtolower($gpu)) as $karta) {
-        if ((strpos($karta,"amd")!== false) || (strpos($karta,"ati ")!== false) || (strpos($karta,"radeon")!== false)) {
-          $brand=2;
-          break;
-        }
-        if (strpos($karta,"nvidia")!==false) {
-          $brand=1;
-        }
-      }
       // create access token
       $token=generate_random(10);
       
       // save the new agent to the db or update existing one with the same hdd-serial
-      if (mysqli_query_wrapper($dblink,"INSERT INTO agents (name, uid, os, cputype, gpubrand, gpus, token) VALUES ('$name', '$uid', $os, $cpu, $brand,'$gpu','$token')")) {
+      if (mysqli_query_wrapper($dblink,"INSERT INTO agents (name, uid, os, cputype, gpus, token) VALUES ('$name', '$uid', $os, $cpu, '$gpu','$token')")) {
         echo "reg_ok".$separator.$token;
       } else {
         echo "reg_nok".$separator."Could not register you to server.";
@@ -75,18 +64,17 @@ switch ($action) {
 
   case "log":
     // login to master server with previously provided token
-    $kvery=mysqli_query_wrapper($dblink,"SELECT agents.cputype,agents.gpubrand,agents.os FROM agents WHERE agents.token='$token'");
+    $kvery=mysqli_query_wrapper($dblink,"SELECT agents.cputype,agents.os FROM agents WHERE agents.token='$token'");
     if (mysqli_num_rows($kvery)==1) {
       // there is a user with this token in the db
       $erej=mysqli_fetch_array($kvery,MYSQLI_ASSOC);
       $cpu=intval($erej["cputype"]);
-      $gpu=intval($erej["gpubrand"]);
       $os=intval($erej["os"]);
-      if (($gpu==0) || (($cpu!=32) && ($cpu!=64))){
-        echo "log_nok".$separator."Unknown platform, wait to be manually assigned.";
+      if ($cpu!=32 && $cpu!=64){
+        echo "log_nok".$separator."Unknown platform.";
       } else {
         // craft executable name
-        echo "log_ok".$separator.$gpu.$separator.$config["agenttimeout"];
+        echo "log_ok".$separator.$separator.$config["agenttimeout"];
       } 
     } else {
       // token was not found
@@ -123,38 +111,31 @@ switch ($action) {
         
       case "hc":
         // downloading hashcat
-        $kver=mysqli_query_wrapper($dblink,"SELECT id,cputype,gpubrand,hcversion,os FROM agents WHERE token='$token'");
+        $kver=mysqli_query_wrapper($dblink,"SELECT id,cputype,hcversion,os FROM agents WHERE token='$token'");
         if (mysqli_num_rows($kver)==1) {
           // agent is ok
           $ere=mysqli_fetch_array($kver,MYSQLI_ASSOC);
 
           $id=$ere["id"];
           $cpu=$ere["cputype"];
-          $gpu=$ere["gpubrand"];
           $os=$ere["os"];
-          $postf=array("","nvidia","amd");
-          $platf=$postf[$gpu];
           
-          $driver=intval($_GET["driver"]);
-
           // find out newest version
-          $kver=mysqli_query_wrapper($dblink,"SELECT * FROM hashcatreleases WHERE minver_$platf<=$driver ORDER BY time DESC LIMIT 1");
+          $kver=mysqli_query_wrapper($dblink,"SELECT * FROM hashcats ORDER BY time DESC LIMIT 1");
           if ($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
             // there are some releases defined
             $verze=$erej["version"];
-            $minver=$erej["minver_$platf"];
-            $url=$erej["url_$platf"];
-            $rootdir=$erej["rootdir_$platf"];
+            $url=$erej["url"];
+            $rootdir=$erej["rootdir"];
             
             $force=(isset($_GET["force"]) ? 1 : 0);
              
-            $prefix=array("","cuda","ocl");
             $postfix=array("exe","bin");
-            $exe=$prefix[$gpu]."Hashcat$cpu.".$postfix[$os];
+            $exe="hashcat$cpu.".$postfix[$os];
              
             if (($ere["hcversion"]!=$verze) || ($force==1)) {
               // the agent needs updating
-              $files=$erej["common_files"]." ".$erej[$cpu."_".$platf];
+              $files=$erej["common_files"];
               
               // give the agent oclhashcat url, a name of root dir and list of files to extract from the archive
               echo "down_ok".$separator.$url.$separator.$files.$separator.$rootdir.$separator.$exe;
@@ -165,9 +146,9 @@ switch ($action) {
           } else {
             // no release was found at all
             $verze=$ere["hcversion"];
-            echo "down_nok".$separator."No hashcat releases found for this driver!";
+            echo "down_nok".$separator."No hashcat releases found on this server!";
           }
-          mysqli_query_wrapper($dblink,"UPDATE agents SET hcversion='$verze',gpudriver=$driver WHERE id=$id");
+          mysqli_query_wrapper($dblink,"UPDATE agents SET hcversion='$verze' WHERE id=$id");
         } else {
           echo "down_nok".$separator."Access token invalid.";
         }
