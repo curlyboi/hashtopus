@@ -279,21 +279,13 @@ echo '</ul>
       // assign agent to a task or unassign it
       $agid=intval($_POST["agent"]);
       $task=intval($_POST["task"]);
-      $vysledek=false;
-      if ($task==0) {
-        // unassign
-        $vysledek=mysqli_query_wrapper($dblink,"DELETE FROM assignments WHERE agent=$agid");
-      } else {
-        $ori=mysqli_query_wrapper($dblink,"SELECT task FROM assignments WHERE agent=$agid");
-        // keep the clever pre-bench query in variable
-        $asskv="IFNULL((SELECT length FROM chunks WHERE solvetime>dispatchtime AND progress=length AND state IN (4,5) AND agent=$agid AND task=$task ORDER BY solvetime DESC LIMIT 1),0)";
-        if ($terej=mysqli_fetch_array($ori,MYSQLI_ASSOC)) {
-          // agent was assigned to something, change the assignment
-          $vysledek=mysqli_query_wrapper($dblink,"UPDATE assignments JOIN tasks ON tasks.id=$task SET assignments.task=tasks.id,assignments.benchmark=$asskv,assignments.autoadjust=tasks.autoadjust,assignments.speed=0 WHERE assignments.agent=$agid");
-        } else {
-          // agent was not assigned, we need a new assignment
-          $vysledek=mysqli_query_wrapper($dblink,"INSERT INTO assignments (task,agent,benchmark,autoadjust) SELECT id,$agid,$asskv,autoadjust FROM tasks WHERE id=$task");
-        }
+      // unassign
+      $vysledek = mysqli_query_wrapper($dblink,"DELETE FROM assignments WHERE agent=$agid");
+      mysqli_query_wrapper($dblink,"DELETE FROM hashlistusers WHERE agent=$agid");
+
+      if ($task!=0) {
+        // agent was not assigned, we need a new assignment
+        $vysledek=mysqli_query_wrapper($dblink,"INSERT INTO assignments (task,agent,benchmark,autoadjust) SELECT id,$agid,0,autoadjust FROM tasks WHERE id=$task");
       }
       if (!$vysledek) {
         echo "Could not assign agent to task $task.";
