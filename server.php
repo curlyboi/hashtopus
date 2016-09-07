@@ -24,8 +24,7 @@ function mysqli_query_wrapper($dblink, $query) {
 
 
 set_time_limit(0);
-include("dbconfig.php");
-$exename="hashtopus.exe";
+include("common.php");
 
 $action=mysqli_real_escape_string($dblink,@$_GET["a"]);
 $token=mysqli_real_escape_string($dblink,@$_GET["token"]);
@@ -94,70 +93,41 @@ switch ($action) {
     break;
 
   case "down":
-    // provide agent with requested download
-    $typ=$_GET["type"];
-    switch ($typ) {
-      case "7zr":
-        // downloading 7zip
-        $kver=mysqli_query_wrapper($dblink,"SELECT os FROM agents WHERE token='$token'");
-        if (mysqli_num_rows($kver)==1) {
-          // agent is ok
-          $ere=mysqli_fetch_array($kver,MYSQLI_ASSOC);
-          $fn="7zr";
-          if ($ere["os"]==0) $fn.=".exe";
-          echo file_get_contents($fn);
-        }
-        break;
-        
-      case "hc":
-        // downloading hashcat
-        $kver=mysqli_query_wrapper($dblink,"SELECT id,cputype,hcversion,os FROM agents WHERE token='$token'");
-        if (mysqli_num_rows($kver)==1) {
-          // agent is ok
-          $ere=mysqli_fetch_array($kver,MYSQLI_ASSOC);
+	// downloading hashcat
+	$kver=mysqli_query_wrapper($dblink,"SELECT id,hcversion FROM agents WHERE token='$token'");
+	if (mysqli_num_rows($kver)==1) {
+	  // agent is ok
+	  $ere=mysqli_fetch_array($kver,MYSQLI_ASSOC);
 
-          $id=$ere["id"];
-          $cpu=$ere["cputype"];
-          $os=$ere["os"];
-          
-          // find out newest version
-          $kver=mysqli_query_wrapper($dblink,"SELECT * FROM hashcats ORDER BY time DESC LIMIT 1");
-          if ($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
-            // there are some releases defined
-            $verze=$erej["version"];
-            $url=$erej["url"];
-            $rootdir=$erej["rootdir"];
-            
-            $force=(isset($_GET["force"]) ? 1 : 0);
-             
-            $postfix=array("exe","bin");
-            $exe="hashcat$cpu.".$postfix[$os];
-             
-            if (($ere["hcversion"]!=$verze) || ($force==1)) {
-              // the agent needs updating
-              $files=$erej["common_files"];
-              
-              // give the agent oclhashcat url, a name of root dir and list of files to extract from the archive
-              echo "down_ok".$separator.$url.$separator.$files.$separator.$rootdir.$separator.$exe;
-            } else {
-              // the agent has up2date version
-              echo "down_na".$separator.$exe;
-            }
-          } else {
-            // no release was found at all
-            $verze=$ere["hcversion"];
-            echo "down_nok".$separator."No hashcat releases found on this server!";
-          }
-          mysqli_query_wrapper($dblink,"UPDATE agents SET hcversion='$verze' WHERE id=$id");
-        } else {
-          echo "down_nok".$separator."Access token invalid.";
-        }
-        break;
-        
-      default:
-        echo "down_nok".$separator."Unknown download type.";
-    }
-    break;
+	  $id=$ere["id"];
+	  // find out newest version
+	  $kver=mysqli_query_wrapper($dblink,"SELECT hashcats.version,files.filename FROM hashcats INNER JOIN files ON hashcats.file = files.id ORDER BY time DESC LIMIT 1");
+	  if ($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
+		// there are some releases defined
+		$verze=$erej["version"];
+		$filename=$erej["filename"];
+		
+		$force=(isset($_GET["force"]) ? 1 : 0);
+		 
+		if (($ere["hcversion"]!=$verze) || ($force==1)) {
+		  // the agent needs updating
+		  mysqli_query_wrapper($dblink,"UPDATE agents SET hcversion='$verze' WHERE id=$id");
+		  
+		  // give the agent oclhashcat url, a name of root dir and list of files to extract from the archive
+		  echo "down_ok".$separator.$filename;
+		} else {
+		  // the agent has up2date version
+		  echo "down_na";
+		}
+	  } else {
+		// no release was found at all
+		$verze=$ere["hcversion"];
+		echo "down_nok".$separator."No hashcat releases found on this server!";
+	  }
+	} else {
+	  echo "down_nok".$separator."Access token invalid.";
+	}
+	break;
     
   case "task":
     // tell agent information about its task
@@ -166,7 +136,7 @@ switch ($action) {
     // and the second is the following task the agent should be assigned to once his current is completed
     // (if agent is not assigned to any task, the next assigned is in the first line - this is
     // identified by column named 'this', where 0=to be assigned, and >0=is assigned)
-    $kver=mysqli_query_wrapper($dblink,"SELECT tasks.id,tasks.autoadjust AS autotask,agents.wait,tasks.attackcmd,hashlists.hashtype,hashlists.format,agents.cmdpars,tasks.statustimer,tasks.hashlist,tasks.priority,IF(tasks.hashlist=atasks.hashlist AND atasks.hashlist IS NOT NULL AND tasks.hashlist IS NOT NULL,'continue','new') AS bench,IF(chunks.sumdispatch=tasks.keyspace AND tasks.progress=tasks.keyspace AND tasks.keyspace>0,0,1) AS taskinc,IF(hashlists.cracked<hashlists.hashcount,1,0) AS hlinc,IF(atasks.id=tasks.id,agents.id,0) AS this FROM tasks JOIN hashlists ON tasks.hashlist=hashlists.id LEFT JOIN (SELECT taskfiles.task,MAX(secret) AS secret FROM taskfiles JOIN files ON taskfiles.file=files.id GROUP BY taskfiles.task) taskfiles ON taskfiles.task=tasks.id JOIN agents ON agents.token='$token' AND agents.active=1 AND agents.trusted>=GREATEST(IFNULL(taskfiles.secret,0),hashlists.secret) LEFT JOIN assignments ON assignments.agent=agents.id LEFT JOIN tasks atasks ON assignments.task=atasks.id LEFT JOIN (SELECT chunks.task,SUM(chunks.length) AS sumdispatch FROM chunks JOIN tasks ON chunks.task=tasks.id WHERE chunks.progress=chunks.length OR GREATEST(chunks.solvetime,chunks.dispatchtime)>=".($cas-$config["chunktimeout"])." GROUP BY chunks.task) chunks ON chunks.task=tasks.id WHERE atasks.id=tasks.id OR ((tasks.progress<tasks.keyspace OR IFNULL(chunks.sumdispatch,0)<tasks.keyspace OR tasks.keyspace=0) AND tasks.priority>0 AND hashlists.cracked<hashlists.hashcount) ORDER BY this DESC, tasks.priority DESC LIMIT 2");
+    $kver=mysqli_query_wrapper($dblink,"SELECT tasks.id,tasks.autoadjust AS autotask,agents.wait,tasks.attackcmd,hashlists.hashtype,hashlists.format,agents.cmdpars,tasks.statustimer,tasks.hashlist,tasks.priority,IF(tasks.hashlist=atasks.hashlist AND atasks.hashlist IS NOT NULL AND tasks.hashlist IS NOT NULL,'continue','new') AS bench,IF(chunks.sumdispatch=tasks.keyspace AND tasks.progress=tasks.keyspace AND tasks.keyspace>0,0,1) AS taskinc,IF(hashlists.cracked<hashlists.hashcount,1,0) AS hlinc,IF(atasks.id=tasks.id,agents.id,0) AS this FROM tasks JOIN hashlists ON tasks.hashlist=hashlists.id LEFT JOIN (SELECT taskfiles.task,MAX(secret) AS secret FROM taskfiles INNER JOIN files ON taskfiles.file=files.id GROUP BY taskfiles.task) taskfiles ON taskfiles.task=tasks.id JOIN agents ON agents.token='$token' AND agents.active=1 AND agents.trusted>=GREATEST(IFNULL(taskfiles.secret,0),hashlists.secret) LEFT JOIN assignments ON assignments.agent=agents.id LEFT JOIN tasks atasks ON assignments.task=atasks.id LEFT JOIN (SELECT chunks.task,SUM(chunks.length) AS sumdispatch FROM chunks JOIN tasks ON chunks.task=tasks.id WHERE chunks.progress=chunks.length OR GREATEST(chunks.solvetime,chunks.dispatchtime)>=".($cas-$config["chunktimeout"])." GROUP BY chunks.task) chunks ON chunks.task=tasks.id WHERE atasks.id=tasks.id OR ((tasks.progress<tasks.keyspace OR IFNULL(chunks.sumdispatch,0)<tasks.keyspace OR tasks.keyspace=0) AND tasks.priority>0 AND hashlists.cracked<hashlists.hashcount) ORDER BY this DESC, tasks.priority DESC LIMIT 2");
     $ere=mysqli_fetch_array($kver,MYSQLI_ASSOC);
     if ($ere!=false) {
       // first line is valid
@@ -220,11 +190,12 @@ switch ($action) {
 
       // ok, we have something to begin with
       echo "task_ok".$separator.$ere["id"].$separator.$ere["wait"].$separator.$ere["attackcmd"].(strlen($ere["cmdpars"])>0 ? " ".$ere["cmdpars"] : "")." --hash-type=".$ere["hashtype"].$separator.$ere["hashlist"].$separator.$ere["bench"].$separator.$ere["statustimer"];
-      // and add listing of related files
       $kver=mysqli_query_wrapper($dblink,"SELECT files.filename FROM taskfiles JOIN files ON taskfiles.file=files.id WHERE taskfiles.task=".$ere["id"]);
-      while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
+      // and add listing of related files
+	  while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
         echo $separator.$erej["filename"];
       }
+	  
     } else {
       // there was nothing
       mysqli_query_wrapper($dblink,"UPDATE assignments JOIN agents ON assignments.agent=agents.id AND agents.token='$token' SET assignments.speed=0");
@@ -236,8 +207,8 @@ switch ($action) {
     // let agent download adjacent files
     $task=intval($_GET["task"]);
     $file=mysqli_real_escape_string($dblink,$_GET["file"]);
-    $kver=mysqli_query_wrapper($dblink,"SELECT 1 FROM assignments JOIN tasks ON tasks.id=assignments.task JOIN agents ON agents.id=assignments.agent JOIN taskfiles ON taskfiles.task=tasks.id JOIN files ON taskfiles.file=files.id WHERE agents.token='$token' AND tasks.id=$task AND files.filename='$file' AND agents.trusted>=files.secret");
-    if (mysqli_num_rows($kver)==1) {
+    $kver=mysqli_query_wrapper($dblink,"SELECT 1 FROM assignments JOIN tasks ON tasks.id=assignments.task JOIN agents ON agents.id=assignments.agent JOIN taskfiles ON taskfiles.task=tasks.id JOIN files ON taskfiles.file=files.id WHERE agents.token='$token' AND tasks.id=$task AND files.filename='$file' AND agents.trusted>=files.secret UNION ALL SELECT 2 FROM agents JOIN hashcats ON agents.hcversion=hashcats.version JOIN files ON files.id=hashcats.file WHERE agents.token='$token' AND files.filename='$file'");
+    if (mysqli_num_rows($kver)==1) { 
       // and add listing of related files
       header("Location: files/$file");
     }

@@ -142,9 +142,7 @@ DROP TABLE IF EXISTS `hashcats`;
 CREATE TABLE `hashcats` (
   `version` varchar(10) COLLATE latin1_bin NOT NULL,
   `time` bigint(20) NOT NULL,
-  `url` varchar(128) COLLATE latin1_bin NOT NULL,
-  `common_files` varchar(128) COLLATE latin1_bin NOT NULL,
-  `rootdir` varchar(32) COLLATE latin1_bin NOT NULL,
+  `file` int(11) NOT NULL COMMENT 'File id',
   PRIMARY KEY (`version`),
   KEY `newest_search` (`time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_bin COMMENT='oclHashcat releases';
@@ -332,7 +330,7 @@ CREATE TABLE `zapqueue` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-09-05 10:03:21
+-- Dump completed on 2016-09-07 17:09:09
 
 
 INSERT INTO `config` (`item`,`value`) VALUES
@@ -369,14 +367,14 @@ INSERT INTO `hashtypes` (`id`, `description`) VALUES
 (40, 'md5($salt.unicode($pass))'),
 (3800, 'md5($salt.$pass.$salt)'),
 (3710, 'md5($salt.md5($pass))'),
-(2600, 'md5(md5($pass)'),
+(2600, 'md5(md5($pass))'),
 (4300, 'md5(strtoupper(md5($pass)))'),
 (4400, 'md5(sha1($pass))'),
 (110, 'sha1($pass.$salt)'),
 (120, 'sha1($salt.$pass)'),
 (130, 'sha1(unicode($pass).$salt)'),
 (140, 'sha1($salt.unicode($pass))'),
-(4500, 'sha1(sha1($pass)'),
+(4500, 'sha1(sha1($pass))'),
 (4700, 'sha1(md5($pass))'),
 (4900, 'sha1($salt.$pass.$salt)'),
 (1410, 'sha256($pass.$salt)'),
@@ -430,6 +428,7 @@ INSERT INTO `hashtypes` (`id`, `description`) VALUES
 (10000, 'Django (PBKDF2-SHA256)'),
 (3711, 'Mediawiki B type'),
 (7600, 'Redmine'),
+(13900, 'OpenCart'),
 (12, 'PostgreSQL'),
 (131, 'MSSQL(2000)'),
 (132, 'MSSQL(2005)'),

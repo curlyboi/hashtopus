@@ -1,10 +1,8 @@
 <?php
-$htpver="1.0";
-$htphost=$_SERVER['HTTP_HOST'];
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);
 session_start();
-include("dbconfig.php");
+include("common.php");
 
 function mysqli_query_wrapper($dblink, $query, $bypass=false) {
   $log="\n<!-- $query";
@@ -919,18 +917,17 @@ echo '</ul>
       
     case "releases":
       // list hashcat releases
-      $kver=mysqli_query_wrapper($dblink,"SELECT * FROM hashcats ORDER BY time DESC");
+      $kver=mysqli_query_wrapper($dblink,"SELECT hashcats.version, hashcats.time, files.filename FROM hashcats LEFT JOIN files ON hashcats.file = files.id ORDER BY time DESC");
       echo "List of Hashcat releases (".mysqli_num_rows($kver).")";
       echo "<table class=\"styled\">";
-      echo "<tr><td>Version</td><td>Added</td><td>URL</td><td>Common files</td><td>Root directory</td><td>Action</td></tr>";
+      echo "<tr><td>Version</td><td>Added</td><td>File</td><td>Action</td></tr>";
       while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
         $ver=$erej["version"];
         echo "<tr><td>$ver</td><td>";
         if ($erej["time"]>0) {
           echo date($config["timefmt"],$erej["time"]);
         }
-        echo "</td><td><a href=\"".$erej["url"]."\" target=\"_blank\" title=\"Test URL\">".basename($erej["url"])."</a></td><td>".$erej["common_files"]."</td>";
-        echo "<td>".$erej["rootdir"]."</td>";
+        echo "</td><td><a href=\"files/".$erej["filename"]."\" target=\"_blank\" title=\"Test URL\">".basename($erej["filename"])."</a></td>";
 
         echo "<td><form action=\"$myself?a=releasedelete\" method=\"POST\" onSubmit=\"if (!confirm('Really delete Hashcat release $ver?')) return false;\">";
         echo "<input type=\"hidden\" name=\"return\" value=\"a=releases\">";
@@ -1205,10 +1202,10 @@ echo '</ul>
               // attach files
               $attachok=true;
               if (isset($_POST["adfile"])) {
-                foreach($_POST["adfile"] as $fid) {
+				foreach($_POST["adfile"] as $fid) {
                   if ($fid>0) {
                     echo "Attaching file $fid...";
-                    if (mysqli_query_wrapper($dblink,"INSERT INTO taskfiles (task,file) VALUES ($id, $fid)")) {
+                    if (mysqli_query_wrapper($dblink,"INSERT INTO taskfiles (task, file) VALUES ($id, $fid)")) {
                       echo "OK";
                     } else {
                       echo "ERROR!";
@@ -1808,25 +1805,18 @@ echo '</ul>
       echo "<form action=\"$myself?a=newreleasep\" method=\"POST\" enctype=\"multipart/form-data\">";
       echo "<table class=\"styled\">";
       
-      if (isset($_GET["auto"])) {
-        // get all details from hashcat website
-        $dom="http://hashcat.net";
-        $data=file_get_contents("$dom/hashcat/");
-        preg_match_all ("/\/files\/(hashcat-([0-9.]*)).*\.7z/", $data, $matche);
-        $erej=array("version" => $matche[2][0], "url" => $dom.$matche[0][0], "rootdir" => $matche[1][0], "common_files" => "OpenCL/* hashcat.hcstat hashcat.hctune");
-      } else {
-        // get details from previous release
-        $kver=mysqli_query_wrapper($dblink,"SELECT * FROM hashcats ORDER BY time DESC LIMIT 1");
-        $erej=mysqli_fetch_array($kver,MYSQLI_ASSOC);
-        $erej["version"]="";
-      }
+      // get details from previous release
+      $kver=mysqli_query_wrapper($dblink,"SELECT version FROM hashcats ORDER BY time DESC LIMIT 1");
+      $erej=mysqli_fetch_array($kver,MYSQLI_ASSOC);
 
-      echo "<tr><td>Property</td><td>Value (<a href=\"$myself?a=$geta&auto\">autoupdate</a>)</td></tr>";
+      echo "<tr><td>Property</td><td>Value</td></tr>";
       echo "<tr><td>Version:</td><td><input type=\"text\" name=\"version\" value=\"{$erej["version"]}\"></td></tr>";
-      echo "<tr><td>Archive URL:</td><td><textarea name=\"url\" cols=\"32\">{$erej["url"]}</textarea></td></tr>";
-      echo "<tr><td>Archive root directory:</td><td><input type=\"text\" name=\"rootdir\" size=\"32\" value=\"{$erej["rootdir"]}\"></td></tr>";
-      echo "<tr><td colspan=\"2\">Files to extract (relative to root directory, omit executables and use forward slashes):</td></tr>";
-      echo "<tr><td>Common:</td><td><textarea name=\"common_files\" cols=\"64\">{$erej["common_files"]}</textarea></td></tr>";
+      echo "<tr><td>Uploaded file:</td><td><select name=\"file\">";
+      $kver=mysqli_query_wrapper($dblink,"SELECT id, filename FROM files WHERE filename LIKE 'hashcat-%.zip' ORDER BY filename");
+      while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
+        echo "<option value=\"{$erej["id"]}\">{$erej["filename"]}</option>";
+      }
+      echo "</select></td></tr>";
       echo "<tr><td colspan=\"2\"><input type=\"submit\" value=\"Create release\"></td></tr>";
       echo "</table>";
       echo "</form>";
@@ -1835,14 +1825,12 @@ echo '</ul>
     case "newreleasep":
       // new hashcat release creator
       $version=mysqli_real_escape_string($dblink,$_POST["version"]);
-      $url=mysqli_real_escape_string($dblink,$_POST["url"]);
-      $common_files=mysqli_real_escape_string($dblink,$_POST["common_files"]);
-      $rootdir=mysqli_real_escape_string($dblink,$_POST["rootdir"]);
+      $file=intval($_POST["file"]);
       if ($version=="") {
         echo "You must specify the version";
       } else {
         echo "Creating release in the DB...";
-        $vysledek=mysqli_query_wrapper($dblink,"INSERT INTO hashcats (version,time,url,common_files,rootdir) VALUES ('$version',$cas,'$url','$common_files','$rootdir')");
+        $vysledek=mysqli_query_wrapper($dblink,"INSERT INTO hashcats (version,time,file) VALUES ('$version',$cas,$file)");
         if ($vysledek) {
           // insert succeeded
           echo "OK";
@@ -2995,7 +2983,6 @@ function delete_task($task) {
   $vysledek7=$vysledek6 && mysqli_query_wrapper($dblink,"DELETE FROM chunks WHERE task=$task");
 
   $vysledek8=$vysledek7 && mysqli_query_wrapper($dblink,"DELETE FROM tasks WHERE id=$task");
-  
   return ($vysledek8);
 }
 
@@ -3009,8 +2996,8 @@ function delete_agent($agent) {
   $vysledek4=$vysledek3 && mysqli_query_wrapper($dblink,"DELETE FROM zapqueue WHERE agent=$agent");
 
   // orphan the chunks
-  $vysledek5=$vysledek4 && mysqli_query_wrapper($dblink,"UPDATE hashes JOIN chunks ON hashes.chunk=chunks.id AND chunks.agent=$agent SET chunk=NULL");
-  $vysledek6=$vysledek5 && mysqli_query_wrapper($dblink,"UPDATE hashes_binary JOIN chunks ON hashes_binary.chunk=chunks.id AND chunks.agent=$agent SET chunk=NULL");
+  //$vysledek5=$vysledek4 && mysqli_query_wrapper($dblink,"UPDATE hashes JOIN chunks ON hashes.chunk=chunks.id AND chunks.agent=$agent SET chunk=NULL");
+  //$vysledek6=$vysledek5 && mysqli_query_wrapper($dblink,"UPDATE hashes_binary JOIN chunks ON hashes_binary.chunk=chunks.id AND chunks.agent=$agent SET chunk=NULL");
   $vysledek7=$vysledek6 && mysqli_query_wrapper($dblink,"UPDATE chunks SET agent=NULL WHERE agent=$agent");
 
   $vysledek8=$vysledek7 && mysqli_query_wrapper($dblink,"DELETE FROM agents WHERE id=$agent");
