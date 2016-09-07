@@ -2998,11 +2998,11 @@ function delete_agent($agent) {
   // orphan the chunks
   //$vysledek5=$vysledek4 && mysqli_query_wrapper($dblink,"UPDATE hashes JOIN chunks ON hashes.chunk=chunks.id AND chunks.agent=$agent SET chunk=NULL");
   //$vysledek6=$vysledek5 && mysqli_query_wrapper($dblink,"UPDATE hashes_binary JOIN chunks ON hashes_binary.chunk=chunks.id AND chunks.agent=$agent SET chunk=NULL");
-  $vysledek7=$vysledek6 && mysqli_query_wrapper($dblink,"UPDATE chunks SET agent=NULL WHERE agent=$agent");
+  $vysledek5=$vysledek4 && mysqli_query_wrapper($dblink,"UPDATE chunks SET agent=NULL WHERE agent=$agent");
 
-  $vysledek8=$vysledek7 && mysqli_query_wrapper($dblink,"DELETE FROM agents WHERE id=$agent");
+  $vysledek6=$vysledek5 && mysqli_query_wrapper($dblink,"DELETE FROM agents WHERE id=$agent");
   
-  return ($vysledek8);
+  return ($vysledek6);
 }
 
 $endtime=microtime(true);
