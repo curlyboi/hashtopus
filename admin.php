@@ -89,6 +89,7 @@ $loadtime=microtime(true);
   </script>
 </head>
 <body>
+<table class="big"><tr><td>
 <?php
 if (isset($_POST["pwd"])) {
   if (!isset($config["password"]) || makepwd($_POST["pwd"])==$config["password"]) $_SESSION[$sess_name]=1;
@@ -104,7 +105,7 @@ if (isset($_SESSION[$sess_name]) && $_SESSION[$sess_name]==1) {
   }
 
   // create the menu
-  echo '<table class="big"><tr><td><a href="'.$myself.'"><img src="img/logo.png" alt="Hashtopus"></a><br><ul>
+  echo '<a href="'.$myself.'"><img src="img/logo.png" alt="Hashtopus"></a><br><ul>
 <li><a href="'.$myself.'?a=agents">Agents</a></li>
 <li><a href="'.$myself.'?a=deploy">Agent deployer</a></li>
 <br>
@@ -334,23 +335,29 @@ echo '</ul>
         $fname=$erej["filename"];
         $kver=mysqli_query_wrapper($dblink,"SELECT 1 FROM taskfiles WHERE file=$fid");
         if (mysqli_num_rows($kver)>0) {
-          // file is used
+          // file is used in task
           echo "<script>alert('File is used in a task.');</script>";
         } else {
-          $vysledek1=mysqli_query_wrapper($dblink,"DELETE FROM files WHERE id=$fid");
-          if ($vysledek1) {
-            if (file_exists("files/".$fname)) {
-              $vysledek2=unlink("files/".$fname);
-            } else {
-              $vysledek2=true;
-            }
-          }
-          if ($vysledek1 && $vysledek2) {
-            mysqli_query_wrapper($dblink,"COMMIT");
-          } else {
-            mysqli_query_wrapper($dblink,"ROLLBACK");
-            echo "<script>alert('Could not delete file!');</script>";
-          }
+	      $kver2=mysqli_query_wrapper($dblink,"SELECT 1 FROM hashcats WHERE file=$fid");
+		  if (mysqli_num_rows($kver2)>0) {
+			// file is used as release
+            echo "<script>alert('File is used as a Hashcat release.');</script>";
+		  } else {
+			$vysledek1=mysqli_query_wrapper($dblink,"DELETE FROM files WHERE id=$fid");
+			if ($vysledek1) {
+			if (file_exists("files/".$fname)) {
+			  $vysledek2=unlink("files/".$fname);
+			} else {
+			  $vysledek2=true;
+			}
+			}
+			if ($vysledek1 && $vysledek2) {
+			mysqli_query_wrapper($dblink,"COMMIT");
+			} else {
+			mysqli_query_wrapper($dblink,"ROLLBACK");
+			echo "<script>alert('Could not delete file!');</script>";
+			}
+		  }
         }
       } else {
         echo "<script>alert('Such file is not defined.');</script>";
