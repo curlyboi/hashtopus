@@ -3,10 +3,9 @@ include ("dbconfig.php");
 
 $separator="\x01";
 $sess_name="authaxs";
-$htpver="1.2";
+$htpver="1.4";
 $exename="hashtopus.exe";
 
-$dblink = @mysqli_connect($dbhost,$dbuser,$dbpass,$dbname) or die("Error " . mysqli_connect_error($dblink));
 $htphost=$_SERVER['HTTP_HOST'];
 
 $kv=mysqli_query($dblink,"SELECT * FROM config");

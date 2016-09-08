@@ -33,6 +33,10 @@ header("Content-Type: application/octet-stream");
 
 
 switch ($action) {
+  case "ver":
+    echo $htpver;
+    return;
+    
   case "reg":
     // register at master server - user will be given a token
     $voucher=mysqli_real_escape_string($dblink,$_POST["voucher"]);
@@ -84,7 +88,7 @@ switch ($action) {
   case "update":
     // check if provided hash is the same as executable and send file contents if not
     $hash=(isset($_GET["hash"]) ? $_GET["hash"] : "");
-    $htexe=file_get_contents($exename)."http".(isset($_SERVER['HTTPS']) ? "s" : "")."://".$_SERVER['HTTP_HOST'].$_SERVER['SCRIPT_NAME'];
+    $htexe=file_get_contents($exename); //."http".(isset($_SERVER['HTTPS']) ? "s" : "")."://".$_SERVER['HTTP_HOST'].$_SERVER['SCRIPT_NAME'];
     $myhash=md5($htexe);
     if ($hash!=$myhash) {
       header("Content-Disposition: attachment; filename=\"$exename\""); 
@@ -174,7 +178,7 @@ switch ($action) {
             // erase hashlist users, they will be returned on joining next task
             if ($ere["format"]==3) {
               mysqli_query_wrapper($dblink,"DELETE FROM hashlistusers WHERE hashlist IN (SELECT hashlist FROM superhashlists WHERE id=".$ere["hashlist"].") AND agent=".$ere["this"]);
-              mysqli_query_wrapper($dblink,"DELETE FROM zapqueue WHERE hashlist IN (SELECT hashlist FROM superhashlists WHERE id=".$ere["hashlist"].") AND agent=".$ere["this"]);
+              mysqli_query_wrapper($dblink,"DELETE FROM zapqueue WHERE hashlist IN (SELECT hashlist FROM superhashlists WHERE id=".$ere["hashlist"].") agent=".$ere["this"]);
             } else {
               mysqli_query_wrapper($dblink,"DELETE FROM hashlistusers WHERE hashlist=".$ere["hashlist"]." AND agent=".$ere["this"]);
               mysqli_query_wrapper($dblink,"DELETE FROM zapqueue WHERE hashlist=".$ere["hashlist"]." AND agent=".$ere["this"]);
@@ -235,7 +239,7 @@ switch ($action) {
         $superhash=false;
       }
       
-      // handle superhashlist - give agent hashes from included hashlists
+      // handle superhahslist - give agent hashes from included hashlists
       // and only those that his trust level is allowed to get
       $hlistar=array();
       if ($superhash) {
@@ -613,15 +617,12 @@ switch ($action) {
               mysqli_query_wrapper($dblink,"UPDATE hashlists JOIN tmphlcracks ON hashlists.id=tmphlcracks.hashlist SET hashlists.cracked=hashlists.cracked+tmphlcracks.cracked");
               mysqli_query_wrapper($dblink,"INSERT IGNORE INTO zapqueue (hashlist,agent,time,chunk) SELECT hashlistusers.hashlist,hashlistusers.agent,$crack_cas,$cid FROM hashlistusers JOIN tmphlcracks ON hashlistusers.hashlist=tmphlcracks.hashlist AND tmphlcracks.zaps=1 WHERE hashlistusers.agent!=$agid");
               // increase the timer so the chunks won't timeout during the result writing
-              mysqli_query_wrapper($dblink,"COMMIT");
               $crack_cas=time();
-              mysqli_query_wrapper($dblink,"START TRANSACTION");
               mysqli_query_wrapper($dblink,"UPDATE chunks SET cracked=cracked+(SELECT IFNULL(SUM(cracked),0) FROM tmphlcracks),solvetime=$crack_cas WHERE id=$cid");
               mysqli_query_wrapper($dblink,"UPDATE tmphlcracks SET cracked=0,zaps=0");
             }
             
             $crack_cas=$cas;
-            mysqli_query_wrapper($dblink,"START TRANSACTION");
             foreach ($data as $dato) {
               // for non empty lines update solved hashes
               if ($dato=="") continue;
@@ -691,7 +692,6 @@ switch ($action) {
               }
             }
             writecache();
-            mysqli_query_wrapper($dblink,"COMMIT");
             // drop the temporary cache
             mysqli_query_wrapper($dblink,"DROP TABLE tmphlcracks");
             

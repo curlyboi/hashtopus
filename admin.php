@@ -5,14 +5,13 @@ session_start();
 include("common.php");
 
 function mysqli_query_wrapper($dblink, $query, $bypass=false) {
-  $log="\n<!-- $query";
   $time1=microtime(true);
   $kver=mysqli_query($dblink,$query);
-  // uncomment this line to ditch the logs
+  // uncomment this line to ditch the sql logs in html comments
   // $bypass=true
   if ($bypass==false) {
     $time2=microtime(true);
-    echo $log;
+    echo "\n<!-- $query";
     echo "\nTook: ".($time2-$time1);
     $afec=mysqli_affected_rows($dblink);
     if ($afec>=0) {
