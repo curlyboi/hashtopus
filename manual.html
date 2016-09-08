@@ -75,7 +75,7 @@
     <li>statustimer - Default for how often should agent report its status during cracking (seconds)</li>
     <li>timefmt - Date/time format to display in admin (see PHP function date() for this)</li>
     </ul>
-    You should also take your time to configure the Hashcat releases. Hashtopus employs distribution mechanism to ensure that every agent will have the newest possible Hashcat release suitable for their GPU driver. The installation SQL script comes with pre-defined release pointing to the current version at the time of release, but as newer versions will be released, you will need to add them to your releases. Further info is explained in the Releases menu item documentation.
+    You should also take your time to configure the Hashcat releases. Hashtopus employs distribution mechanism to ensure that every agent will have the newest possible Hashcat release suitable for their GPU driver. First you need to repack Hashcat to zip file and put into your global files labeled as hashcat-*.zip. Then you need to create a release from that global file. It is recommended to use the tool hashtopus-hcdownloader that will do all that automatically for you.
     <h2>Uploading files</h2>
     If you are not new to cracking hashes, you probably have a nice collection of wordlists and rules. If you want to use those files in a cracking tasks, you need to add them to Global files section. This can be done three different ways and all of them are covered in Global files menu item documentation.
     <h2>Pre-defined tasks</h2>
