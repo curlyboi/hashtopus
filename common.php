@@ -3,7 +3,7 @@ include ("dbconfig.php");
 
 $separator="\x01";
 $sess_name="authaxs";
-$htpver="1.4";
+$htpver="1.5";
 $exename="hashtopus.exe";
 $filesdir="files";
 
