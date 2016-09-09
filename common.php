@@ -5,6 +5,7 @@ $separator="\x01";
 $sess_name="authaxs";
 $htpver="1.4";
 $exename="hashtopus.exe";
+$filesdir="files";
 
 $htphost=$_SERVER['HTTP_HOST'];
 

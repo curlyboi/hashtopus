@@ -39,53 +39,6 @@ $loadtime=microtime(true);
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <!--<META http-equiv="cache-control" content="no-cache">-->
   <script type="text/javascript" src="jscolor/jscolor.js"></script>
-  <script>
-    function sourceChange(valu) {
-      var pasteObject=document.getElementById("pasteLine");
-      var uploadObject=document.getElementById("uploadLine");
-      var importObject=document.getElementById("importLine");
-      var downloadObject=document.getElementById("downloadLine");
-      switch (valu) {
-        case 'paste':
-          pasteObject.style.display = '';
-          uploadObject.style.display = 'none';
-          importObject.style.display = 'none';
-          downloadObject.style.display = 'none';
-          break;
-          
-        case 'upload':
-          pasteObject.style.display = 'none';
-          uploadObject.style.display = '';
-          importObject.style.display = 'none';
-          downloadObject.style.display = 'none';
-          break;
-          
-        case 'import':
-          pasteObject.style.display = 'none';
-          uploadObject.style.display = 'none';
-          importObject.style.display = '';
-          downloadObject.style.display = 'none';
-          break;
-
-        case 'url':
-          pasteObject.style.display = 'none';
-          uploadObject.style.display = 'none';
-          importObject.style.display = 'none';
-          downloadObject.style.display = '';
-          break;
-      }
-    }
-    function checkAll(formname, checktoggle)
-    {
-      var checkboxes = new Array(); 
-      checkboxes = document.getElementById(formname).getElementsByTagName('input');
-      for (var i=0; i<checkboxes.length; i++)  {
-        if (checkboxes[i].type == 'checkbox')   {
-          checkboxes[i].checked = checktoggle;
-        }
-      }
-    }
-  </script>
 </head>
 <body>
 <table class="big"><tr><td>
@@ -148,6 +101,9 @@ echo '</ul>
   $formats=array("Text","HCCAP","Binary","Superhashlist");
   $formattables=array("hashes","hashes_binary","hashes_binary");
   $uperrs=array("","Uploaded file is too big for server settings, use different transfer method (i.e. FTP) and run directory scan in Task detail","Uploaded file is too big for form setting. Have you been playing with admin again?!","File upload was interrupted","No file was uploaded","","Server doesn't have a temporary folder","Failed writing to disk. Maybe no space left or >2GB file on FAT32","Some PHP module stopped the transfer");
+  $srcchange="function sourceChange(valu){var pasteObject=document.getElementById(\"pasteLine\");var uploadObject=document.getElementById(\"uploadLine\");var importObject=document.getElementById(\"importLine\");var downloadObject=document.getElementById(\"downloadLine\");switch (valu){case 'paste':pasteObject.style.display = '';uploadObject.style.display = 'none';importObject.style.display = 'none';downloadObject.style.display = 'none';break;case 'upload':pasteObject.style.display = 'none';uploadObject.style.display = '';importObject.style.display = 'none';downloadObject.style.display = 'none';break;case 'import':pasteObject.style.display = 'none';uploadObject.style.display = 'none';importObject.style.display = '';downloadObject.style.display = 'none';break;case 'url':pasteObject.style.display = 'none';uploadObject.style.display = 'none';importObject.style.display = 'none';downloadObject.style.display = '';break;}}";
+  $checkall="function checkAll(formname,checktoggle){var checkboxes = new Array();checkboxes = document.getElementById(formname).getElementsByTagName('input');for (var i=0; i<checkboxes.length; i++){if (checkboxes[i].type == 'checkbox'){checkboxes[i].checked = checktoggle;}}}";
+  
   $geta=(isset($_GET["a"]) ? $_GET["a"] : "");
   switch ($geta) {
 
@@ -344,8 +300,8 @@ echo '</ul>
 		  } else {
 			$vysledek1=mysqli_query_wrapper($dblink,"DELETE FROM files WHERE id=$fid");
 			if ($vysledek1) {
-			if (file_exists("files/".$fname)) {
-			  $vysledek2=unlink("files/".$fname);
+			if (file_exists("$filesdir/".$fname)) {
+			  $vysledek2=unlink("$filesdir/".$fname);
 			} else {
 			  $vysledek2=true;
 			}
@@ -591,12 +547,12 @@ echo '</ul>
       while($erej=mysqli_fetch_array($kv,MYSQLI_ASSOC)) {
         $id=$erej["id"];
         $fil=$erej["filename"];
-        if (file_exists("files/$fil")) {
-          if (is_dir("files/$fil")) {
+        if (file_exists("$filesdir/$fil")) {
+          if (is_dir("$filesdir/$fil")) {
             mysqli_query_wrapper($dblink,"DELETE FROM files WHERE id=$id");
             echo "<b>File $fil was a directory, deleted from database</b>";
           } else {
-            $nsize=filesize("files/$fil");
+            $nsize=filesize("$filesdir/$fil");
             $size=$erej["size"];
             if ($nsize==$size) {
               echo "File $fil OK.";
@@ -687,7 +643,7 @@ echo '</ul>
       // update task chunk time
       $task=intval($_POST["task"]);
       $chunktime=intval($_POST["chunktime"]);
-      mysqli_query_wrapper($dblink,"SET autocommit = 0");
+      mysqli_query_wrapper($dblink,"START TRANSACTION");
       $vysledek1=mysqli_query_wrapper($dblink,"UPDATE assignments JOIN tasks ON tasks.id=assignments.task SET assignments.benchmark=(assignments.benchmark/tasks.chunktime)*$chunktime WHERE assignments.task=$task");
       $vysledek2=mysqli_query_wrapper($dblink,"UPDATE tasks SET chunktime=$chunktime WHERE id=$task");
       if ($vysledek1 && $vysledek2) {
@@ -925,7 +881,7 @@ echo '</ul>
         if ($erej["time"]>0) {
           echo date($config["timefmt"],$erej["time"]);
         }
-        echo "</td><td><a href=\"files/".$erej["filename"]."\" target=\"_blank\" title=\"Test URL\">".basename($erej["filename"])."</a></td>";
+        echo "</td><td><a href=\"$filesdir/".$erej["filename"]."\" target=\"_blank\" title=\"Test URL\">".basename($erej["filename"])."</a></td>";
 
         echo "<td><form action=\"$myself?a=releasedelete\" method=\"POST\" onSubmit=\"if (!confirm('Really delete Hashcat release $ver?')) return false;\">";
         echo "<input type=\"hidden\" name=\"return\" value=\"a=releases\">";
@@ -939,7 +895,10 @@ echo '</ul>
     case "files":
       // list global files
       $kver=mysqli_query_wrapper($dblink,"SELECT files.id,files.filename,files.secret,files.size,IFNULL(taskfiles.tasks,0) AS tasks FROM files LEFT JOIN (SELECT   file,COUNT(task) AS tasks FROM taskfiles GROUP BY file) taskfiles ON taskfiles.file=files.id ORDER BY filename ASC");
-      echo "<script>function addLine(tablename) { var table=document.getElementById(tablename); var pos=table.getElementsByTagName('tr').length-1; var row=table.insertRow(pos); var cell=row.insertCell(0); cell.innerHTML= '<input type=\\x22file\\x22 name=\\x22upfile[]\\x22><br>'; }</script>";
+      echo "<script>";
+	  echo "function addLine(tablename) { var table=document.getElementById(tablename); var pos=table.getElementsByTagName('tr').length-1; var row=table.insertRow(pos); var cell=row.insertCell(0); cell.innerHTML= '<input type=\\x22file\\x22 name=\\x22upfile[]\\x22><br>'; } ";
+	  echo $checkall;
+	  echo "</script>";
       echo "<table><tr><td>";
       echo "Existing files (".mysqli_num_rows($kver)."):";
       echo "<table class=\"styled\">";
@@ -947,7 +906,7 @@ echo '</ul>
       while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
         $id=$erej["id"];
         $fname=$erej["filename"];
-        echo "<tr><td>$id</td><td><a name=\"$id\" href=\"files/$fname\" target=\"_blank\">$fname</a>";
+        echo "<tr><td>$id</td><td><a name=\"$id\" href=\"$filesdir/$fname\" target=\"_blank\">$fname</a>";
         if ($erej["secret"]==1) echo " <img src=\"img/lock.gif\" alt=\"Secret\">";
         echo "</td>";
 
@@ -1035,7 +994,7 @@ echo '</ul>
             foreach ($soubory as $klic=>$soubor) {
               $nsoubor[$klic]=$soubor[$i];
             }
-            $tmpfile="files/".$realname;
+            $tmpfile="$filesdir/".$realname;
             if (uploadFile($tmpfile,$source,$nsoubor)) {
               if (insertFile($tmpfile)) {
                 $pocetup++;
@@ -1055,7 +1014,7 @@ echo '</ul>
           foreach($soubory as $soubor) {
             // copy all uploaded attached files to proper directory
             $realname=basename($soubor);
-            $tmpfile="files/".$realname;
+            $tmpfile="$filesdir/".$realname;
             if (uploadFile($tmpfile,$source,$realname)) {
               if (insertFile($tmpfile)) {
                 $pocetup++;
@@ -1071,7 +1030,7 @@ echo '</ul>
         case "url":
           // from url
           $realname=basename($_POST["url"]);
-          $tmpfile="files/".$realname;
+          $tmpfile="$filesdir/".$realname;
           if (uploadFile($tmpfile,$source,$_POST["url"])) {
             if (insertFile($tmpfile)) {
               $pocetup++;
@@ -1116,6 +1075,7 @@ echo '</ul>
       echo "<table><tr><td>";
       echo "Create new task:";
       echo "<form action=\"$myself?a=newtaskp\" method=\"POST\" enctype=\"multipart/form-data\">";
+
       echo "<table class=\"styled\">";
       echo "<tr><td>Property</td><td>Value</td></tr>";
       echo "<tr><td>Name:</td><td><input type=\"text\" name=\"name\" value=\"$oname\"></td></tr>";
@@ -1136,10 +1096,35 @@ echo '</ul>
       echo "<tr><td>Benchmark:</td><td><input type=\"checkbox\" name=\"autoadjust\" value=\"1\"".($oadjust==1 ? " checked" : "")."> Auto adjust<br>(Not recommended for AMD and/or in combination with small chunks sizes)</td></tr>";
       echo "<tr><td>Color:</td><td>#<input type=\"text\" name=\"color\" size=\"6\" class=\"color {required:false}\" value=\"$color\"></td></tr>";
       echo "<tr><td colspan=\"2\"><input type=\"submit\" value=\"Create task\"></td></tr>";
-      echo "</table>";
+      echo "</table><br>";
+
+      echo "Multiple task creation:";
+	  echo "<script>";
+	  echo "function multiChange(valu){var pasteObject=document.getElementById(\"pasteLine\");var fileObject=document.getElementById(\"fileLine\");var macroObject=document.getElementById(\"macroLine\");switch (valu){case 'paste':pasteObject.style.display = '';fileObject.style.display = 'none';macroObject.style.display = '';break;case 'file':pasteObject.style.display = 'none';fileObject.style.display = '';macroObject.style.display = '';break;case 'off':pasteObject.style.display = 'none';fileObject.style.display = 'none';macroObject.style.display = 'none';break;}}";
+	  echo "</script>";
+	  echo "<table class=\"styled\">";
+	  echo "<tr><td>Property</td><td>Value</td></tr>";
+      echo "<tr><td>Mode:</td><td>";
+	  echo "<input type=\"radio\" name=\"multi\" onChange=\"multiChange(this.value);\" value=\"off\" checked>Disabled<br>";
+	  echo "<input type=\"radio\" name=\"multi\" onChange=\"multiChange(this.value);\" value=\"paste\">Paste<br>";
+	  echo "<input type=\"radio\" name=\"multi\" onChange=\"multiChange(this.value);\" value=\"file\">Mask file<br>";
+	  echo "</td></tr>";
+      echo "<tr id=\"macroLine\"><td>Macro:</td><td><input type=\"text\" name=\"macro\" value=\"#MACRO#\"></td></tr>";
+      echo "<tr id=\"pasteLine\"><td>Values:</td><td><textarea name=\"multivals\" cols=\"32\" rows=\"10\" id=\"vals\"></textarea>";
+      echo "<tr id=\"fileLine\"><td>File:</td><td><select name=\"multifile\">";
+      $kver=mysqli_query_wrapper($dblink,"SELECT id, filename FROM files ORDER BY filename");
+      while($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
+        echo "<option value=\"{$erej["id"]}\">{$erej["filename"]}</option>";
+      }
+	  echo "</select></td></tr>";
+      echo "<tr><td colspan=\"2\">Each value will yield a new task with that value in place of macro.</td>";
+	  echo "</table>";
+	  echo "<script>multiChange(\"off\");</script>";
+
       echo "</td><td>";
       echo "Attach files:";
       echo "<script>function assignFile(cmdLine,addObject,fileName) { if (fileName.indexOf('.7z') != -1) fileName=fileName.substring(0,fileName.length-2)+'???'; var cmdObject = document.getElementById(cmdLine); if (addObject == true) { if (cmdObject.value.indexOf(fileName) == -1) { if (cmdObject.value.length>0 && cmdObject.value.slice(-1)!=' ') cmdObject.value += ' '; cmdObject.value += fileName; } } else { cmdObject.value = cmdObject.value.replace(fileName,''); while (cmdObject.value.slice(-1)==' ') cmdObject.value=cmdObject.value.substring(0,cmdObject.value.length-1); while (cmdObject.value.substring(0,1)==' ') cmdObject.value=cmdObject.value.substring(1); } }</script>";
+
       echo "<table class=\"styled\">";
       echo "<tr><td>Filename</td><td>Size</td></tr>";
       if ($orig>0) {
@@ -1156,6 +1141,7 @@ echo '</ul>
         echo "</td><td>".nicenum($erej["size"])."B</td></tr>";
       }
       echo "</table>";
+
       echo "</form>";
       echo "</td></tr></table>";
       break;
@@ -1189,40 +1175,79 @@ echo '</ul>
         }
         if ($hashlist!="") {
           if ($status>0 && $chunk>0 && $chunk>$status) {
-            mysqli_query_wrapper($dblink,"SET autocommit = 0");
-            mysqli_query_wrapper($dblink,"START TRANSACTION");
-            echo "Creating task in the DB...";
-            $vysledek=mysqli_query_wrapper($dblink,"INSERT INTO tasks (name, attackcmd, hashlist, chunktime, statustimer, autoadjust, color) VALUES ('$name', '$cmdline', $hashlist, $chunk, $status, $autoadj, $color)");
-            if ($vysledek) {
-              // insert succeeded
-              $id=mysqli_insert_id($dblink);
-              echo "OK (id: $id)<br>";
-              // attach files
-              $attachok=true;
-              if (isset($_POST["adfile"])) {
-				foreach($_POST["adfile"] as $fid) {
-                  if ($fid>0) {
-                    echo "Attaching file $fid...";
-                    if (mysqli_query_wrapper($dblink,"INSERT INTO taskfiles (task, file) VALUES ($id, $fid)")) {
-                      echo "OK";
-                    } else {
-                      echo "ERROR!";
-                      $attachok=false;
-                    }
-                    echo "<br>";
-                  }
-                }
-              }
-              if ($attachok==true) {
-                mysqli_query_wrapper($dblink,"COMMIT");
-                echo "Task created successfuly!";
-                $returnpage=$treturnpage;
-              } else {
-                mysqli_query_wrapper($dblink,"ROLLBACK");
-              }
-            } else {
-              echo "ERROR: ".mysqli_error($dblink);
-            }
+			$multi=$_POST["multi"];
+			$macro=$_POST["macro"];
+			if ($multi != "off") {
+				switch ($multi) {
+					case "paste":
+						// get data from textarea
+						$data=$_POST["multivals"];
+						break;
+						
+					case "file":
+						// get data from file
+						$fid=intval($_POST["multifile"]);
+						$kver=mysqli_query_wrapper($dblink,"SELECT * FROM files WHERE id=$fid");
+						$erej=mysqli_fetch_array($kver,MYSQLI_ASSOC);
+						$data=file_get_contents("$filesdir/".$erej["filename"]);
+						break;
+				}
+				$seps=array("\r\n","\n","\r");
+				$ls="";
+				foreach ($seps as $sep) {
+				  if (strpos($data,$sep)!==false) {
+					$ls=$sep;
+					break;
+				  }
+				}
+				$mdata=explode($ls,$data);
+			} else {
+				$mdata=array($macro);
+			}
+			for ($m=0;$m<count($mdata);$m++) {
+				
+				$mcmdline = $cmdline;
+				$mname = $name;
+				if ($multi!="off") {
+					if ($mdata[$m]=="") continue;
+					$mcmdline = str_replace($macro,$mdata[$m],$cmdline);
+					$mname += " ".$mdata[$m];
+				}
+				
+				mysqli_query_wrapper($dblink,"START TRANSACTION");
+				echo "Creating task in the DB...";
+				$vysledek=mysqli_query_wrapper($dblink,"INSERT INTO tasks (name, attackcmd, hashlist, chunktime, statustimer, autoadjust, color) VALUES ('$mname', '$mcmdline', $hashlist, $chunk, $status, $autoadj, $color)");
+				if ($vysledek) {
+				  // insert succeeded
+				  $id=mysqli_insert_id($dblink);
+				  echo "OK (id: $id)<br>";
+				  // attach files
+				  $attachok=true;
+				  if (isset($_POST["adfile"])) {
+					foreach($_POST["adfile"] as $fid) {
+					  if ($fid>0) {
+						echo "Attaching file $fid...";
+						if (mysqli_query_wrapper($dblink,"INSERT INTO taskfiles (task, file) VALUES ($id, $fid)")) {
+						  echo "OK";
+						} else {
+						  echo "ERROR!";
+						  $attachok=false;
+						}
+						echo "<br>";
+					  }
+					}
+				  }
+				  if ($attachok==true) {
+					mysqli_query_wrapper($dblink,"COMMIT");
+					echo "Task created successfuly!";
+					$returnpage=$treturnpage;
+				  } else {
+					mysqli_query_wrapper($dblink,"ROLLBACK");
+				  }
+				} else {
+				  echo "ERROR: ".mysqli_error($dblink);
+				}
+			}
           } else {
             echo "Chunk time must be higher than status timer.";
           }
@@ -1236,6 +1261,9 @@ echo '</ul>
       // new superhashlist form
       echo "<form id=\"newsuper\" action=\"$myself?a=newsuperhashlistp\" method=\"POST\">";
       echo "Create superhashlist over these hashlists:";
+	  echo "<script>";
+	  echo $checkall;
+	  echo "</script>";
       echo "<table class=\"styled\">";
       echo "<tr><td>id</td><td>Name</td><td>Hash type</td></tr>";
       $kver=mysqli_query_wrapper($dblink,"SELECT id,name,hashtype FROM hashlists WHERE format!=3 ORDER BY hashtype ASC, id ASC");
@@ -1260,12 +1288,11 @@ echo '</ul>
         $hlisty=implode(",",$hlistar);
         $kv=mysqli_query_wrapper($dblink,"SELECT DISTINCT format, hashtype FROM hashlists WHERE id IN ($hlisty)");
         if (mysqli_num_rows($kv)==1) {
-          mysqli_query_wrapper($dblink,"SET autocommit = 0");
-          mysqli_query_wrapper($dblink,"START TRANSACTION");
           $erej=mysqli_fetch_array($kv,MYSQLI_ASSOC);
           echo "Creating superhashlist in the DB...<br>";
           $name=mysqli_real_escape_string($dblink,$_POST["name"]);
           if ($name=="") $name="SHL_".$erej["hashtype"];
+          mysqli_query_wrapper($dblink,"START TRANSACTION");
           $vysledek=mysqli_query_wrapper($dblink,"INSERT INTO hashlists (name,format,hashtype,hashcount,cracked) SELECT '$name',3,".$erej["hashtype"].",SUM(hashlists.hashcount),SUM(hashlists.cracked) FROM hashlists WHERE hashlists.id IN ($hlisty)");
           if ($vysledek) {
             $id=mysqli_insert_id($dblink);
@@ -1276,12 +1303,11 @@ echo '</ul>
               $returnpage="a=superhashlists";
               echo "Done.<br>";
             } else {
-              echo "Could not insert hashes to superhashlist";
+              echo "Could not insert hashlists to superhashlist";
             }
           } else {
             echo "Could not create superhashlist";
           }
-          mysqli_query_wrapper($dblink,"SET autocommit = 1");
         } else {
           echo "Hashlists must be the same format and hash type to create a superhashlist.";
         }
@@ -1296,13 +1322,19 @@ echo '</ul>
     case "newhashlist":
       // new hashlist form
       echo "Upload new hashlist:";
-      echo "<script>function formatChange(valu) { var txtObject=document.getElementById('textopt'); if (valu=='0') { txtObject.style.display = ''; } else { txtObject.style.display = 'none'; } }</script>";
+      echo "<script>";
+	  echo "function formatChange(valu) { var txtObject=document.getElementById('textopt'); if (valu=='0') { txtObject.style.display = ''; } else { txtObject.style.display = 'none'; } }";
+	  echo $srcchange;
+	  echo "</script>";
       echo "<form action=\"$myself?a=newhashlistp\" method=\"POST\" enctype=\"multipart/form-data\">";
       echo "<table class=\"styled\">";
       echo "<tr><td>Property</td><td>Value</td></tr>";
       echo "<tr><td>Name:</td><td><input type=\"text\" name=\"name\" size=\"35\"></td></tr>";
       echo "<tr><td>Hashtype:</td><td><input type=\"text\" name=\"hashtype\" size=\"5\"></td></tr>";
-      echo "<tr><td>Hashlist format:</td><td><select name=\"format\" onChange=\"formatChange(this.value);\"><option value=\"0\">Text file</option><option value=\"1\">HCCAP file</option><option value=\"2\">Binary file (single hash)</option></select>";
+      echo "<tr><td>Hashlist format:</td><td>";
+      echo "<input type=\"radio\" name=\"format\" onChange=\"formatChange(this.value);\" value=\"0\" checked>Text file<br>";
+      echo "<input type=\"radio\" name=\"format\" onChange=\"formatChange(this.value);\" value=\"1\">HCCAP file<br>";
+      echo "<input type=\"radio\" name=\"format\" onChange=\"formatChange(this.value);\" value=\"2\">Binary file (single hash)<br>";
       echo "<span id=\"textopt\">";
       echo "<br><input type=\"checkbox\" name=\"salted\" value=\"1\"> Salted hashes, separator <input type=\"text\" name=\"separator\" value=\"".$config["fieldseparator"]."\" size=\"1\">";
       //echo "<br>(Accepted format is hash[:salt])";
@@ -1313,9 +1345,9 @@ echo '</ul>
       echo "<input type=\"radio\" name=\"source\" onChange=\"sourceChange(this.value);\" value=\"import\">Import<br>";
       echo "<input type=\"radio\" name=\"source\" onChange=\"sourceChange(this.value);\" value=\"url\">URL download";
       echo "</td></tr>";
-      echo "<tr id=\"pasteLine\" style=\"display: none;\"><td>Input field:</td><td><textarea name=\"hashfield\" cols=\"60\" rows=\"10\"></textarea></td></tr>";
+      echo "<tr id=\"pasteLine\"><td>Input field:</td><td><textarea name=\"hashfield\" cols=\"60\" rows=\"10\"></textarea></td></tr>";
       echo "<tr id=\"uploadLine\"><td>File to upload:</td><td><input type=\"file\" name=\"hashfile\"></td></tr>";
-      echo "<tr id=\"importLine\" style=\"display: none;\"><td>File to import:</td><td>";
+      echo "<tr id=\"importLine\"><td>File to import:</td><td>";
       if (file_exists("import") && is_dir("import")) {
         $impdir=opendir("import");
         $impfiles=array();
@@ -1337,10 +1369,11 @@ echo '</ul>
         echo "'import' directory does not exist.";
       }
       echo "</td></tr>";
-      echo "<tr id=\"downloadLine\" style=\"display: none;\"><td>File URL:</td><td><input type=\"text\" name=\"url\" size=\"35\"></td></tr>";
+      echo "<tr id=\"downloadLine\"><td>File URL:</td><td><input type=\"text\" name=\"url\" size=\"35\"></td></tr>";
       echo "<tr><td colspan=\"3\"><input type=\"submit\" value=\"Create hashlist\"></td></tr>";
       echo "</table>";
       echo "</form>";
+	  echo "<script>sourceChange(\"upload\");</script>";
       break;
       
     case "newhashlistp":
@@ -1566,6 +1599,9 @@ echo '</ul>
         $format=$erej["format"];
         $salted=$erej["salted"];
         echo "Import pre-cracked hashes:";
+		echo "<script>";
+		echo $srcchange;
+		echo "</script>";
         echo "<form action=\"$myself?a=hashlistzapp\" method=\"POST\" enctype=\"multipart/form-data\">";
         echo "<input type=\"hidden\" name=\"hashlist\" value=\"$hlist\">";
         echo "<table class=\"styled\">";
@@ -1594,9 +1630,9 @@ echo '</ul>
         echo "<input type=\"radio\" name=\"source\" onChange=\"sourceChange(this.value);\" value=\"import\">Import<br>";
         echo "<input type=\"radio\" name=\"source\" onChange=\"sourceChange(this.value);\" value=\"url\">URL download";
         echo "</td></tr>";
-        echo "<tr id=\"pasteLine\" style=\"display: none;\"><td>Input field:</td><td><textarea name=\"hashfield\" cols=\"60\" rows=\"10\"></textarea></td></tr>";
+        echo "<tr id=\"pasteLine\"><td>Input field:</td><td><textarea name=\"hashfield\" cols=\"60\" rows=\"10\"></textarea></td></tr>";
         echo "<tr id=\"uploadLine\"><td>File to upload:</td><td><input type=\"file\" name=\"hashfile\"></td></tr>";
-        echo "<tr id=\"importLine\" style=\"display: none;\"><td>File to import:</td><td>";
+        echo "<tr id=\"importLine\"><td>File to import:</td><td>";
         if (file_exists("import") && is_dir("import")) {
           $impdir=opendir("import");
           $impfiles=array();
@@ -1618,12 +1654,13 @@ echo '</ul>
           echo "'import' directory does not exist.";
         }
         echo "</td></tr>";
-        echo "<tr id=\"downloadLine\" style=\"display: none;\"><td>File URL:</td><td><input type=\"text\" name=\"url\" size=\"35\"></td></tr>";
+        echo "<tr id=\"downloadLine\"><td>File URL:</td><td><input type=\"text\" name=\"url\" size=\"35\"></td></tr>";
         echo "<tr><td>Conflict resolution:</td><td><input type=\"checkbox\" name=\"overwrite\" value=\"1\">Overwrite already cracked hashes</td></tr>";
         echo "<tr><td colspan=\"3\"><input type=\"submit\" value=\"Pre-crack hashes\"></td></tr>";
         echo "</table>";
         echo "</form>";
-      }
+		echo "<script>sourceChange(\"upload\");</script>";
+	  }
       break;
       
     case "hashlistzapp":
@@ -1935,6 +1972,9 @@ echo '</ul>
         if (mysqli_num_rows($kver)>0) {
           echo "</td><td>";
           echo "Create pre-configured tasks:";
+		  echo "<script>";
+		  echo $checkall;
+		  echo "</script>";
           echo "<form id=\"preconf\" action=\"$myself?a=preconf\" method=\"POST\">";
           echo "<input type=\"hidden\" name=\"hashlist\" value=\"$hlist\">";
           echo "<table class=\"styled\">";
@@ -1972,7 +2012,7 @@ echo '</ul>
         if (mysqli_num_rows($kv)>0) {
           $wlist="Wordlist_".$hlist."_".date("Y-m-d_H-i-s",$cas).".txt";
           echo "Opening wordlist for writing...<br>";
-          $fx=fopen("files/".$wlist,"w");
+          $fx=fopen("$filesdir/".$wlist,"w");
           $p=0;
           while ($erej=mysqli_fetch_array($kv,MYSQLI_ASSOC)) {
             $plain=$erej["plaintext"];
@@ -1986,7 +2026,7 @@ echo '</ul>
           }
           fclose($fx);
           echo "Written $p words.<br>";
-          insertFile("files/".$wlist);
+          insertFile("$filesdir/".$wlist);
         } else {
           echo "Nothing cracked.";
         }
@@ -2004,7 +2044,7 @@ echo '</ul>
         list($superhash,$hlisty)=superList($hlist,$format);
         
         $tmpfile="Pre-cracked_".$hlist."_".date("Y-m-d_H-i-s",$cas).".txt";
-        $tmpfull=mysqli_real_escape_string($dblink,dirname($_SERVER["SCRIPT_FILENAME"])."/files/".$tmpfile);
+        $tmpfull=mysqli_real_escape_string($dblink,dirname($_SERVER["SCRIPT_FILENAME"])."/$filesdir/".$tmpfile);
         $salted=false;
         $kvery1="SELECT ";
         switch ($format) {
@@ -2036,7 +2076,7 @@ echo '</ul>
           echo "File export failed, trying SELECT with file output<br>";
           $kvery=$kvery1.$kvery3;
           $kv=mysqli_query_wrapper($dblink,$kvery);
-          $fexp=fopen("files/".$tmpfile,"w");
+          $fexp=fopen("$filesdir/".$tmpfile,"w");
           while($erej=mysqli_fetch_array($kv,MYSQLI_ASSOC)) {
             fwrite($fexp,$erej["hash"].($salted ? $config["fieldseparator"].$erej["salt"] : "").$config["fieldseparator"].$erej["plaintext"]."\n");
           }
@@ -2044,7 +2084,7 @@ echo '</ul>
         }
         
         if ($kv) {
-          if (insertFile("files/".$tmpfile)) {
+          if (insertFile("$filesdir/".$tmpfile)) {
             echo "Cracked hashes from hashlist $hlist exported.";
           } else {
             echo "Cracked hashes exported, but the file is missing.";
@@ -2692,27 +2732,29 @@ echo '</ul>
       echo "Provide agent with valid voucher and this link:<br>";
       echo "<a href=\"server.php?a=update\">Download agent</a><br><br>";
       if (isset($_POST["newvoucher"])) {
-        mysqli_query_wrapper($dblink,"INSERT INTO regvouchers (voucher,time) VALUES ('".mysqli_real_escape_string($dblink,$_POST["newvoucher"])."',$cas)");
+        $reus = (isset($_POST["reusable"]) ? 1 : 0);
+		mysqli_query_wrapper($dblink,"INSERT INTO regvouchers (voucher,time,reusable) VALUES ('".mysqli_real_escape_string($dblink,$_POST["newvoucher"])."',$cas,$reus)");
       }
-      $kver=mysqli_query_wrapper($dblink,"SELECT voucher,time FROM regvouchers");
+      $kver=mysqli_query_wrapper($dblink,"SELECT voucher,time,reusable FROM regvouchers");
       if (mysqli_num_rows($kver)>0) {
         echo "Existing vouchers:<br>";
-        echo "<table class=\"styled\"><tr><td>Voucher</td><td>Issued</td><td>Action</td></tr>";
+        echo "<table class=\"styled\"><tr><td>Voucher</td><td>Issued</td><td>Reusable</td><td>Action</td></tr>";
         while ($erej=mysqli_fetch_array($kver,MYSQLI_ASSOC)) {
           $id=$erej["voucher"];
           echo "<tr><td>$id</td>";
           echo "<td>".date($config["timefmt"],$erej["time"])."</td>";
+          echo "<td>".($erej["reusable"]=="1" ? "yes" : "no")."</td>";
           echo "<td><form action=\"$myself?a=voucherdelete\" method=\"POST\" onSubmit=\"if (!confirm('Really delete this voucher?')) return false;\">";
           echo "<input type=\"hidden\" name=\"return\" value=\"a=deploy\">";
           echo "<input type=\"hidden\" name=\"voucher\" value=\"$id\">";
           echo "<input type=\"submit\" value=\"Delete\"></form></td></tr>";
         }
-        echo "</table>Used vouchers are automaticaly deleted to prevent double spending.<br><br>";
+        echo "</table><br>";
       }
       echo "<form action=\"$myself?a=deploy\" method=\"POST\">";
       echo "<table class=\"styled\"><tr><td>New voucher</td></tr>";
       echo "<tr><td><input type=\"text\" name=\"newvoucher\" value=\"".generate_random(8)."\"></td></tr>";
-      echo "<tr><td><input type=\"submit\" value=\"Create\"></td></tr>";
+      echo "<tr><td><input type=\"submit\" value=\"Create\"><input type=\"checkbox\" name=\"reusable\" value=\"1\"> Reusable</td></tr>";
       echo "</table></form>";
       break;
     

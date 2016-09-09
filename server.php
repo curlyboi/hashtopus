@@ -41,9 +41,12 @@ switch ($action) {
     // register at master server - user will be given a token
     $voucher=mysqli_real_escape_string($dblink,$_POST["voucher"]);
     mysqli_query_wrapper($dblink,"START TRANSACTION");
-    $tc=mysqli_query_wrapper($dblink,"SELECT 1 FROM regvouchers WHERE voucher='$voucher'");
+    $tc=mysqli_query_wrapper($dblink,"SELECT reusable FROM regvouchers WHERE voucher='$voucher'");
     if (mysqli_num_rows($tc)==1) {
-      mysqli_query_wrapper($dblink,"DELETE FROM regvouchers WHERE voucher='$voucher'");
+      $erej=mysqli_fetch_array($tc,MYSQLI_ASSOC);
+	  // delete voucher if not reusable
+	  if ($erej["reusable"]!="1")
+		mysqli_query_wrapper($dblink,"DELETE FROM regvouchers WHERE voucher='$voucher'");
       $cpu=intval($_POST["cpu"]);
       $gpu=mysqli_real_escape_string($dblink,$_POST["gpus"]);
       $uid=mysqli_real_escape_string($dblink,$_POST["uid"]);
@@ -88,11 +91,9 @@ switch ($action) {
   case "update":
     // check if provided hash is the same as executable and send file contents if not
     $hash=(isset($_GET["hash"]) ? $_GET["hash"] : "");
-    $htexe=file_get_contents($exename); //."http".(isset($_SERVER['HTTPS']) ? "s" : "")."://".$_SERVER['HTTP_HOST'].$_SERVER['SCRIPT_NAME'];
-    $myhash=md5($htexe);
+    $myhash=md5(file_get_contents($exename));
     if ($hash!=$myhash) {
-      header("Content-Disposition: attachment; filename=\"$exename\""); 
-      echo $htexe;
+      header("Location: $myexe")
     }
     break;
 
