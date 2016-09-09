@@ -33,8 +33,8 @@ header("Content-Type: application/octet-stream");
 
 
 switch ($action) {
-  case "ver":
-    echo $htpver;
+  case "id":
+    echo "Hashtopus";
     return;
     
   case "reg":
@@ -93,7 +93,7 @@ switch ($action) {
     $hash=(isset($_GET["hash"]) ? $_GET["hash"] : "");
     $myhash=md5(file_get_contents($exename));
     if ($hash!=$myhash) {
-      header("Location: $myexe")
+      header("Location: $exename");
     }
     break;
 
