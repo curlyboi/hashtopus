@@ -248,6 +248,7 @@ DROP TABLE IF EXISTS `regvouchers`;
 CREATE TABLE `regvouchers` (
   `voucher` varchar(10) COLLATE latin1_bin NOT NULL COMMENT 'Registration vouchers',
   `time` bigint(20) NOT NULL COMMENT 'Timestamp of creation',
+  `reusable` bit(1) NOT NULL DEFAULT b'0' COMMENT 'Allows the voucher to be reused',
   PRIMARY KEY (`voucher`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_bin COMMENT='Tokens allowing agent registration';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -330,7 +331,7 @@ CREATE TABLE `zapqueue` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-09-07 17:09:09
+-- Dump completed on 2016-09-09 13:19:51
 
 
 INSERT INTO `config` (`item`,`value`) VALUES
