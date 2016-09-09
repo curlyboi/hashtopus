@@ -1100,7 +1100,7 @@ echo '</ul>
 
       echo "Multiple task creation:";
 	  echo "<script>";
-	  echo "function multiChange(valu){var pasteObject=document.getElementById(\"pasteLine\");var fileObject=document.getElementById(\"fileLine\");var macroObject=document.getElementById(\"macroLine\");var incObject=document.getElementById(\"incLine\");switch (valu){case 'paste':pasteObject.style.display = '';fileObject.style.display = 'none';macroObject.style.display = '';incObject.style.display = 'none';break;case 'file':pasteObject.style.display = 'none';fileObject.style.display = '';macroObject.style.display = '';incObject.style.display = 'none';break;case 'increment':pasteObject.style.display = 'none';fileObject.style.display = 'none';macroObject.style.display = '';incObject.style.display = '';break;case 'off':pasteObject.style.display = 'none';fileObject.style.display = 'none';macroObject.style.display = 'none';incObject.style.display = 'none';break;}}";
+	  echo "function multiChange(valu){var pasteObject=document.getElementById(\"pasteLine\");var fileObject=document.getElementById(\"fileLine\");var macroObject=document.getElementById(\"macroLine\");switch (valu){case 'paste':pasteObject.style.display = '';fileObject.style.display = 'none';macroObject.style.display = '';break;case 'file':pasteObject.style.display = 'none';fileObject.style.display = '';macroObject.style.display = '';break;case 'off':pasteObject.style.display = 'none';fileObject.style.display = 'none';macroObject.style.display = 'none';break;}}";
 	  echo "</script>";
 	  echo "<table class=\"styled\">";
 	  echo "<tr><td>Property</td><td>Value</td></tr>";
@@ -1108,7 +1108,6 @@ echo '</ul>
 	  echo "<input type=\"radio\" name=\"multi\" onChange=\"multiChange(this.value);\" value=\"off\" checked>Disabled<br>";
 	  echo "<input type=\"radio\" name=\"multi\" onChange=\"multiChange(this.value);\" value=\"paste\">Paste<br>";
 	  echo "<input type=\"radio\" name=\"multi\" onChange=\"multiChange(this.value);\" value=\"file\">Mask file<br>";
-	  echo "<input type=\"radio\" name=\"multi\" onChange=\"multiChange(this.value);\" value=\"increment\">Brute increment<br>";
 	  echo "</td></tr>";
       echo "<tr id=\"macroLine\"><td>Macro:</td><td><input type=\"text\" name=\"macro\" value=\"#MACRO#\"></td></tr>";
       echo "<tr id=\"pasteLine\"><td>Values:</td><td><textarea name=\"multivals\" cols=\"32\" rows=\"10\" id=\"vals\"></textarea>";
@@ -1118,14 +1117,13 @@ echo '</ul>
         echo "<option value=\"{$erej["id"]}\">{$erej["filename"]}</option>";
       }
 	  echo "</select></td></tr>";
-      echo "<tr id=\"incLine\"><td>Parameters:</td><td>Min: <input type=\"text\" name=\"incMin\" size=\"2\">, Max: <input type=\"text\" name=\"incMax\" size=\"2\">Mask: <input type=\"text\" name=\"incMask\" size=\"30\"></td><tr>";
       echo "<tr><td colspan=\"2\">Each value will yield a new task with that value in place of macro.</td>";
 	  echo "</table>";
 	  echo "<script>multiChange(\"off\");</script>";
 
       echo "</td><td>";
       echo "Attach files:";
-      echo "<script>function assignFile(cmdLine,addObject,fileName) { if (fileName.toLowerCase().indexOf('.zip') != -1) fileName=fileName.substring(0,fileName.length-3)+'???'; var cmdObject = document.getElementById(cmdLine); if (addObject == true) { if (cmdObject.value.indexOf(fileName) == -1) { if (cmdObject.value.length>0 && cmdObject.value.slice(-1)!=' ') cmdObject.value += ' '; cmdObject.value += fileName; } } else { cmdObject.value = cmdObject.value.replace(fileName,''); while (cmdObject.value.slice(-1)==' ') cmdObject.value=cmdObject.value.substring(0,cmdObject.value.length-1); while (cmdObject.value.substring(0,1)==' ') cmdObject.value=cmdObject.value.substring(1); } }</script>";
+      echo "<script>function assignFile(cmdLine,addObject,fileName) { if (fileName.indexOf('.7z') != -1) fileName=fileName.substring(0,fileName.length-2)+'???'; var cmdObject = document.getElementById(cmdLine); if (addObject == true) { if (cmdObject.value.indexOf(fileName) == -1) { if (cmdObject.value.length>0 && cmdObject.value.slice(-1)!=' ') cmdObject.value += ' '; cmdObject.value += fileName; } } else { cmdObject.value = cmdObject.value.replace(fileName,''); while (cmdObject.value.slice(-1)==' ') cmdObject.value=cmdObject.value.substring(0,cmdObject.value.length-1); while (cmdObject.value.substring(0,1)==' ') cmdObject.value=cmdObject.value.substring(1); } }</script>";
 
       echo "<table class=\"styled\">";
       echo "<tr><td>Filename</td><td>Size</td></tr>";
@@ -1181,33 +1179,6 @@ echo '</ul>
 			$macro=$_POST["macro"];
 			if ($multi != "off") {
 				switch ($multi) {
-					case "increment":
-						// generate incremental brute force attack
-						$incmsk=$_POST["incMask"];
-						$incmin=intval($_POST["incMin"]);
-						$incmax=intval($_POST["incMax"]);
-						$data="";
-						for ($inc=$incmin;$inc<=$incmax;$inc++) {
-							$inccut="";
-							$pocet=0;
-							$special=false;
-							for($ch=0;$ch<strlen($incmsk);$ch++) {
-								$nznak=$incmsk[$ch];
-								$inccut.=$nznak;
-								if (!$special && $nznak=="?") {
-									// starting escape ?
-									$special=true;
-								} else {
-									// either standard char or char following escape ?
-									$special=false;
-									$pocet++;
-								}
-								if ($pocet>=$inc) break;
-							}
-							$data.="$inccut\n";
-						}
-						break;
-
 					case "paste":
 						// get data from textarea
 						$data=$_POST["multivals"];
@@ -1240,7 +1211,7 @@ echo '</ul>
 				if ($multi!="off") {
 					if ($mdata[$m]=="") continue;
 					$mcmdline = str_replace($macro,$mdata[$m],$cmdline);
-					$mname .= " ".$mdata[$m];
+					$mname += " ".$mdata[$m];
 				}
 				
 				mysqli_query_wrapper($dblink,"START TRANSACTION");
@@ -2810,8 +2781,6 @@ echo '</ul>
     case "":
       echo "Welcome to Hashtopus $htpver, the ultimate multi-platform portable solution to distributed hash cracking.<br>";
       echo "If you have problems with anything, try <a href=\"manual.html\" target=\"_blank\">consulting the manual</a>.";
-	  echo "<br><br>If you are feeling particulary generous, you can support Hashtopus development by donating.<br>";
-	  echo '<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank"><input type="hidden" name="cmd" value="_s-xclick"><input type="hidden" name="encrypted" value="-----BEGIN PKCS7-----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-----END PKCS7-----"><input type="image" src="https://www.paypalobjects.com/en_GB/i/btn/btn_donate_SM.gif" border="0" name="submit" alt="PayPal – The safer, easier way to pay online!"></form>';
   }
 
   // if there is someplace to return, go there
