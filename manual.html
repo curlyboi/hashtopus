@@ -23,7 +23,7 @@
     <li>Event-driven cracking mode</li>
     </ul>
     <h2>Architecture concept</h2>
-    Hashtopus is a multiplatform client-server tool to distribute oclHashcat/cudaHashcat tasks between multiple computers. The main goals for its development were portability, robustness and ease of use. The application has two parts:<ul>
+    Hashtopus is a multiplatform client-server tool to distribute Hashcat tasks between multiple computers. The main goals for its development were portability, robustness and ease of use. The application has two parts:<ul>
     <li>Agent</li>
     single .NET 2.0 binary executable<br><br>
     <li>Server</li>
@@ -81,14 +81,14 @@
     <h2>Pre-defined tasks</h2>
     As you might have noticed, you often apply the same kinds of attacks against every hashlist you acquire. It would be a waste of time to define it every time. That's why Hashtopus has Pre-defined tasks. Pre-defined tasks look like normal tasks but they are not directly attached to any hashlist. Once you upload a new hashlist, you can select which of the pre-defined tasks you want to apply to it. Hashtopus will then duplicate those tasks for that specific hashlist and execute them in the defined order (priority).
     <hr>
-    <h1>Features documentation</h1>
+    <h1>Web admin documentation</h1>
     This section documents each feature by its menu item. The features are sorted by chronological order, in which they are likely to be used.
     <h2>Server configuration</h2>
     Allows you to set configuration values and a password for accessing Hashtopus admin.<br>You also have a set of DB-cleaning tools in case you get yourself into some inconsistency trouble.
     <h2>Hashcat releases</h2>
-    This section contains list of defined Hashcat releases. Each release has numerous values that describe what to do with it. There are separate options for NVidia cards and AMD cards because Hashcat is released in two separate archives as well. Each release therefore contains URL to download on each platform. Column Common files contains list of files to extract regardless of CPU architecture or GPU brand. These files will be extracted on every agent. Next column are Specific files. There you can see different lists of files for 32/64 bit CPUs combined with NVidia/AMD brand, total of 4 combinations. Next column is Root directory, which is simply the name of the Root directory inside the archive. All files in previous columns are expected to be relative to the Root directory. Following is the Required driver column. This specifies the minimal version of GPU driver the agent has to have installed in order to be given instruction to download this Hashcat version. NVidia drivers are specified as five numbers, for example 33167 means driver v331.67, AMD drivers are represented by four numbers, where 1404 means Catalyst 14.4. Last column gives you the opportunity to delete old releases. If a release is still used by some agent, you won't be allowed to delete it.
+    This section contains list of defined Hashcat releases. Release system was highly simplified with the rise of Hashcat 3.x. Each release only has version id and link to your global files, where the actual file is stored. Last column gives you the opportunity to delete old releases. If a release is still used by some agent, you won't be allowed to delete it.
     <h2>New release</h2>
-    As the name suggests, this is the place to define new Hashcat releases. Everytime you open this form, it will be prefilled by the data of the last release previous to it, as most of the fields barely change. The URL has to be absolute. All files are space-separated.
+    As the name suggests, this is the place to define new Hashcat releases. Use the supplied tool hashtopus-hcdownloader to create releases and upload them to your system. Optionally, you can repack hashcat 7z to zip and name it hashcat-x.y.zip and place into your global files. Then you can create a release from it.
     <h2>Global files</h2>
     Think of this as a fileserver. Every wordlist and ruleset needs to be added to this list before you can use it in your tasks. You have three ways of adding files:<ul>
     <li>HTTP upload</li>The file will be uploaded from your browser. Suitable for smaller files because default server limits are not very generous.
@@ -107,6 +107,7 @@
     Next option is the status timer. This defines, how often should an agent report to the server during task cracking.<br>
     Last checkbox sets if Hashtopus should adjust agent's benchmark automaticaly according to the last chunk. This means that i.e. if the agent takes longer time than the defined chunk time, next time it will be given smaller chunk to meet the definition. However, this feature should only be enabled for attacks with "stable" speed, like mask attacks.<br>
     If you have already uploaded something into Global files, you see another table on the right with every file in the system. If you want to use any of those files for this task, check them. If you have compressed some files into zip archive, check the archive the same way, but use the inside filenames in the task command line.
+	Since Hashcat doesn't support incremental attacks or hcmask files, there is a multiple task creation mode. In this mode, you can either select file or enter several lines into a textbox. Once the task is created, for each line in that file/textbox, a new task will be created and the macro string (default #MACRO#) will be replaced by this line in the same was the #HL# gets replaced by the hashlist path. If you want to create incremental brute force attack, simply specify min and max length as well as the attack mask (again, the iterated mask will be placed instead of the macro string).
     <h2>Agent deployer</h2>
     Since you have set up all things need to crack hashes, you need some computing power! The Agent deployer menu is just the place to start. On the top of the page, you see "Download agent" link. This is the direct, non-passworded link to download the current Hashtopus agent exe. Download this executable on all machines intended for cracking hashes, regardless of their OS.<br>
     Once executed, the agent will ask for registration voucher. That's what is the form on the page for. You can generate as many vouchers as you want (and you can define your own text and not use the prefilled one). These vouchers are one-time tickets to allow agent registration. Once the registration is successful, the agent will receive connection token and will never ask for password unless you delete that token or delete the agent from the administration.
@@ -116,8 +117,6 @@
     <li>Name</li>This is the actual machine name.
     <li>OS</li>A little icon identifying Windows from Linux.
     <li>CPU</li>Either 32 or 64 bit.
-    <li>GPU brand</li>Either NVidia or AMD.
-    <li>Driver</li>This tells you agent's driver version. Refer to releases' documentation for format explanation.
     <li>GPUs</li>A shortened list of detected GPU cards. Hover mouse for full text.
     <li>Hashcat</li>If not empty, tells you what release of hashcat has the agent downloaded.
     <li>Last activity</li>Tells you what, when and from what IP has the agent done last.
@@ -185,13 +184,12 @@
     <h2>Chunk activity</h2>
     This is the same table as in task or agent details, but shows chunks for ALL tasks and ALL agents.<br>A good place to monitor overall cracking activity.
     <hr>
-    <h1>Command line</h1>
-    The Hashtopus agent has several command line parameters you can use to alter the behaviour of the agent. Those parameters are invoked as standalone words without prefixes like dash, etc.<br>
+    <h1>XML Config</h1>
+    The Hashtopus agent has several config parameters you can use to alter the behaviour of the agent. These parameters are specified in XML file with the same name as the executable.<br>
     <ul>
-    <li>debug</li>Invoking this parameter will force Hashtopus to print all Hashcat output to screen as well as invoked Hashcat command lines. Use this if you are suspecting bad parameters passed to Hashcat or Hashcat outputing garbage.
-    <li>eventmode</li>In the Event mode, Hashtopus won't start cracking immediatelly. Instead, it will create file event_ready and wait for you to delete it.<br>
-    Once you delete it, it will start cracking and will continue to crack as long as there are unfinished tasks.<br>
-    When every work is done, Hashtopus will create file event_idle and wait for more work again. You can use these files to wrap your own scripts<br>
-    around Hashtopus to, for example, use your GPU on other purposes in the meantime when there is nothing to crack.
+    <li>url</li>This parameter should point to your server.php URL including domain name and protocol (http or https).
+	<li>debug</li>Setting this parameter to 1 will force Hashtopus to print all Hashcat output to screen as well as invoked Hashcat command lines. Use this if you are suspecting bad parameters passed to Hashcat or Hashcat outputing garbage.
+    <li>token</li>This parameter will be automatically filled once agent registration was successful.
+	<li>voucher</li>If you want to prevent agent from asking for voucher in interactive manner, use this to override the value. Once registered, value is removed from the config file and essentially replaced with token.
   </body>
 </html>
