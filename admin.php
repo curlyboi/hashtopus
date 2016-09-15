@@ -1,8 +1,9 @@
 <?php
+include("common.php");
+
 if (strpos($htphost,":")!==false) $htphost=substr($htphost,0,strpos($htphost,":"));
 set_time_limit(0);
 session_start();
-include("common.php");
 
 function mysqli_query_wrapper($dblink, $query, $bypass=false) {
   $time1=microtime(true);
