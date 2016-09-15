@@ -1053,6 +1053,7 @@ echo '</ul>
       $ochunk=$config["chunktime"];
       $ostatus=$config["statustimer"];
       $oadjust=0;
+	  $orig=0;
       $hlist="";
       $color="";
       if (isset($_GET["task"])) {
